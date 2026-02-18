@@ -1,4 +1,4 @@
-// Integración con NewsAPI para obtener noticias del día
+// Integracion con GNews para obtener noticias del dia
 
 export interface Article {
   title: string;
@@ -8,54 +8,55 @@ export interface Article {
   publishedAt: string;
 }
 
-// Mapeo de topic IDs del onboarding a términos de búsqueda
+// Mapeo de topic IDs del onboarding a terminos de busqueda
 const TOPIC_SEARCH_TERMS: Record<string, string> = {
-  tecnologia: "tecnología OR technology",
-  "inteligencia-artificial": "inteligencia artificial OR AI OR artificial intelligence",
+  tecnologia: "tecnologia OR technology",
+  "inteligencia-artificial": "inteligencia artificial OR AI",
   ciencia: "ciencia OR science",
-  politica: "política OR politics",
-  economia: "economía OR economy OR finanzas",
-  startups: "startups OR emprendimiento OR venture capital",
-  salud: "salud OR health OR medicina",
-  cultura: "cultura OR entertainment OR arte",
+  politica: "politica OR politics",
+  economia: "economia OR finanzas",
+  startups: "startups OR emprendimiento",
+  salud: "salud OR medicina",
+  cultura: "cultura OR entretenimiento",
 };
 
 export async function fetchNews(
   topics: string[],
   count: number = 10
 ): Promise<Article[]> {
-  const apiKey = process.env.NEWSAPI_KEY;
+  const apiKey = process.env.GNEWS_API_KEY;
   if (!apiKey) {
-    throw new Error("NEWSAPI_KEY no está configurada en las variables de entorno");
+    throw new Error("GNEWS_API_KEY no esta configurada en las variables de entorno");
   }
 
-  // Combinar los términos de búsqueda de todos los topics seleccionados
+  // Combinar los terminos de busqueda de todos los topics seleccionados
   const searchTerms = topics
     .map((topic) => TOPIC_SEARCH_TERMS[topic])
     .filter(Boolean);
 
   if (searchTerms.length === 0) {
-    throw new Error("No se encontraron términos de búsqueda para los topics seleccionados");
+    throw new Error("No se encontraron terminos de busqueda para los topics seleccionados");
   }
 
+  // GNews limita a 10 resultados en plan gratis
+  const maxResults = Math.min(count, 10);
   const query = searchTerms.join(" OR ");
 
   const params = new URLSearchParams({
     q: query,
-    sortBy: "publishedAt",
-    language: "es",
-    pageSize: String(count),
-    apiKey,
+    lang: "es",
+    max: String(maxResults),
+    apikey: apiKey,
   });
 
   const response = await fetch(
-    `https://newsapi.org/v2/everything?${params.toString()}`
+    `https://gnews.io/api/v4/search?${params.toString()}`
   );
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(
-      `Error de NewsAPI (${response.status}): ${error.message || "Error desconocido"}`
+      `Error de GNews (${response.status}): ${(error as { errors?: string[] }).errors?.[0] || "Error desconocido"}`
     );
   }
 
@@ -65,11 +66,11 @@ export async function fetchNews(
     throw new Error("No se encontraron noticias para los temas seleccionados");
   }
 
-  // Mapear al formato tipado y filtrar artículos sin contenido útil
+  // Mapear al formato tipado
   return data.articles
     .filter(
       (a: { title: string; description: string }) =>
-        a.title && a.description && a.title !== "[Removed]"
+        a.title && a.description
     )
     .map(
       (a: {

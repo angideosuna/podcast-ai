@@ -26,10 +26,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validar que las API keys están configuradas
-    if (!process.env.NEWSAPI_KEY) {
+    // Validar que las API keys estan configuradas
+    if (!process.env.GNEWS_API_KEY) {
       return NextResponse.json(
-        { error: "NEWSAPI_KEY no está configurada en el servidor" },
+        { error: "GNEWS_API_KEY no esta configurada en el servidor" },
         { status: 500 }
       );
     }
