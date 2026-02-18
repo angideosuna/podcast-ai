@@ -1,0 +1,255 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { TOPICS } from "@/lib/topics";
+import { AudioPlayer } from "@/components/audio-player";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
+
+interface Article {
+  title: string;
+  description: string;
+  source: string;
+  url: string;
+  publishedAt: string;
+}
+
+interface Episode {
+  id: string;
+  title: string;
+  script: string;
+  topics: string[];
+  duration: number;
+  tone: string;
+  audio_url: string | null;
+  articles: Article[];
+  created_at: string;
+}
+
+export default function EpisodeDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const episodeId = params.id as string;
+
+  const [episode, setEpisode] = useState<Episode | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Estado del audio (para regenerar si no existe)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadEpisode() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("episodes")
+        .select("*")
+        .eq("id", episodeId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error || !data) {
+        router.push("/historial");
+        return;
+      }
+
+      setEpisode(data);
+      if (data.audio_url) setAudioUrl(data.audio_url);
+      setLoading(false);
+    }
+
+    loadEpisode();
+  }, [episodeId, router]);
+
+  const generateAudio = useCallback(async () => {
+    if (!episode) return;
+    setAudioLoading(true);
+    setAudioError(null);
+
+    try {
+      const response = await fetch("/api/generate-audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ script: episode.script, episodeId: episode.id }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          (data as { error?: string }).error || "Error al generar el audio"
+        );
+      }
+
+      const audioBlob = await response.blob();
+      const url = URL.createObjectURL(audioBlob);
+      setAudioUrl(url);
+    } catch (err) {
+      setAudioError(
+        err instanceof Error ? err.message : "No se pudo generar el audio"
+      );
+    } finally {
+      setAudioLoading(false);
+    }
+  }, [episode]);
+
+  // Convertir markdown a HTML
+  function renderMarkdown(md: string): string {
+    return md
+      .replace(
+        /^### (.+)$/gm,
+        '<h3 class="text-lg font-semibold text-slate-200 mt-6 mb-2">$1</h3>'
+      )
+      .replace(
+        /^## (.+)$/gm,
+        '<h2 class="text-xl font-bold text-white mt-8 mb-3">$1</h2>'
+      )
+      .replace(
+        /^# (.+)$/gm,
+        '<h1 class="text-2xl font-bold text-white mt-6 mb-4">$1</h1>'
+      )
+      .replace(
+        /\*\*(.+?)\*\*/g,
+        '<strong class="text-white font-semibold">$1</strong>'
+      )
+      .replace(/\*(.+?)\*/g, '<em class="text-slate-300">$1</em>')
+      .replace(/^---$/gm, '<hr class="border-slate-800 my-6" />')
+      .replace(
+        /\n\n/g,
+        '</p><p class="text-slate-300 leading-relaxed mb-4">'
+      )
+      .replace(
+        /^(?!<)/,
+        '<p class="text-slate-300 leading-relaxed mb-4">'
+      )
+      .concat("</p>");
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[calc(100vh-60px)] items-center justify-center bg-slate-950">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+      </div>
+    );
+  }
+
+  if (!episode) return null;
+
+  return (
+    <div className="min-h-[calc(100vh-60px)] bg-slate-950 px-4 pb-24 pt-8 text-white">
+      <div className="mx-auto max-w-3xl">
+        {/* Volver */}
+        <Link
+          href="/historial"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al historial
+        </Link>
+
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold">{episode.title}</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {new Date(episode.created_at).toLocaleDateString("es-ES", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}{" "}
+            · {episode.duration} min · {episode.tone}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {episode.topics.map((topicId) => {
+              const topic = TOPICS.find((t) => t.id === topicId);
+              return (
+                <span
+                  key={topicId}
+                  className="rounded-full bg-blue-500/15 px-3 py-1 text-sm text-blue-400"
+                >
+                  {topic ? `${topic.emoji} ${topic.nombre}` : topicId}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Boton de generar audio si no existe */}
+        {!audioUrl && !audioLoading && !audioError && (
+          <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-center">
+            <p className="mb-3 text-sm text-slate-400">
+              Este episodio no tiene audio generado
+            </p>
+            <button
+              onClick={generateAudio}
+              className="cursor-pointer rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            >
+              🔊 Generar audio
+            </button>
+          </div>
+        )}
+
+        {/* Guion */}
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8">
+          <div
+            className="prose-invert max-w-none"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(episode.script) }}
+          />
+        </div>
+
+        {/* Fuentes */}
+        {episode.articles && episode.articles.length > 0 && (
+          <div className="mt-8 rounded-xl border border-slate-800 bg-slate-900/50 p-6">
+            <h2 className="mb-4 text-lg font-semibold text-slate-200">
+              📰 Fuentes utilizadas
+            </h2>
+            <ul className="space-y-3">
+              {episode.articles.map((article, i) => (
+                <li
+                  key={i}
+                  className="border-b border-slate-800 pb-3 last:border-0 last:pb-0"
+                >
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group block"
+                  >
+                    <p className="font-medium text-blue-400 transition-colors group-hover:text-blue-300">
+                      {article.title}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {article.source} ·{" "}
+                      {new Date(article.publishedAt).toLocaleDateString(
+                        "es-ES"
+                      )}
+                    </p>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Audio Player */}
+      <AudioPlayer
+        audioUrl={audioUrl}
+        isLoading={audioLoading}
+        error={audioError}
+        onRetry={generateAudio}
+      />
+    </div>
+  );
+}
