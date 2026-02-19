@@ -1,6 +1,6 @@
 # RESUMEN COMPLETO DEL PROYECTO — PodCast.ai
 
-> Ultima actualizacion: 19 de febrero de 2026
+> Ultima actualizacion: 19 de febrero de 2026 (v3 — encuesta personal en onboarding)
 
 ---
 
@@ -8,12 +8,12 @@
 
 ### Que hace la app
 
-**PodCast.ai** es una aplicacion web que genera podcasts diarios personalizados con voces AI. El usuario elige sus temas de interes, duracion, tono y voz preferida. La app busca noticias reales del dia, genera un guion conversacional con IA, y lo convierte en audio con voz natural.
+**PodCast.ai** es una aplicacion web que genera podcasts diarios personalizados con voces AI. El usuario completa una encuesta personal (nombre, nivel, objetivo, horario), elige sus temas de interes, duracion, tono y voz preferida. La app busca noticias reales del dia, genera un guion conversacional con IA adaptado al perfil del oyente, y lo convierte en audio con voz natural.
 
 ### Flujo resumido
 
 ```
-Usuario configura preferencias → App busca noticias del dia → Claude genera guion → ElevenLabs genera audio → Usuario escucha su podcast
+Usuario completa encuesta personal → Configura preferencias de podcast → App busca noticias del dia → Claude genera guion personalizado al perfil → ElevenLabs genera audio → Usuario escucha su podcast
 ```
 
 ### Stack tecnico
@@ -70,15 +70,27 @@ Usuario configura preferencias → App busca noticias del dia → Claude genera 
 | Para que se usa | Generar el guion conversacional del podcast a partir de las noticias |
 | Libreria | `@anthropic-ai/sdk` v0.76.0 |
 | Modelo | `claude-sonnet-4-20250514` |
-| Max tokens | 4096 |
+| Max tokens | 8192 |
 | Archivo | `lib/generate-script.ts` |
 | Variable de entorno | `ANTHROPIC_API_KEY` |
 
 **Como funciona:**
 1. Recibe las noticias filtradas por GNews
-2. Construye un prompt detallado con: noticias, formato de guion, estilo segun tono, reglas de idioma
-3. Claude genera un guion en Markdown con estructura: INTRO → NOTICIAS → CIERRE
-4. Calcula tiempos por seccion segun duracion (150 palabras = 1 minuto de audio)
+2. Usa un **system prompt** con personalidad de podcaster real (identidad, expresiones, reglas de oro, frases prohibidas)
+3. Construye un prompt con: noticias, instrucciones de tono detalladas (con ejemplos DO/DON'T), y variaciones aleatorias
+4. Si el usuario tiene perfil, inyecta un bloque `## PERFIL DEL OYENTE` con instrucciones contextuales (nombre, nivel, objetivo, horario)
+5. Claude genera un guion en Markdown con estilo narrativo/storytelling adaptado al perfil
+6. Calcula tiempos por seccion segun duracion (160 palabras = 1 minuto de audio)
+
+**Sistema de prompts (v2):**
+
+| Componente | Descripcion |
+|-----------|-------------|
+| System prompt | Personalidad de podcaster: curioso, apasionado, cercano. Expresiones naturales del espanol de Espana. 15 frases prohibidas que suenan a IA. |
+| Tone instructions | Instrucciones detalladas por tono con ejemplos concretos de COMO SI y COMO NO debe sonar. |
+| Variabilidad | Pools aleatorios: 6 estilos de apertura, 5 de transicion, 5 de cierre. Cada episodio suena diferente. |
+| Estructura | Flexible, no rigida. Storytelling libre en vez de "Titular → Contexto → Opinion". |
+| Perfil del oyente | Bloque contextual inyectado despues de REGLAS INQUEBRANTABLES. Adapta nivel (principiante→explicar conceptos, experto→terminologia tecnica), objetivo (informar→resumen claro, entretener→contenido dinamico), y horario (manana→energia, noche→relajado). |
 
 **Configuracion de tiempos:**
 
@@ -89,9 +101,9 @@ Usuario configura preferencias → App busca noticias del dia → Claude genera 
 | 30 min | 8 | 60s | 60s | ~195s |
 
 **Tonos soportados:**
-- `casual`: Como un amigo que sabe mucho, coloquial, tutea
-- `profesional`: Briefing ejecutivo, datos concretos, formal pero accesible
-- `deep-dive`: Analitico, contexto historico, datos y cifras, reflexion profunda
+- `casual`: Como Ibai contandote las noticias. Energia alta, humor, coloquial total. Con ejemplos DO/DON'T.
+- `profesional`: Analista tipo The Economist en espanol. Serio pero interesante, datos con peso, ironias puntuales. Con ejemplos DO/DON'T.
+- `deep-dive`: Experto apasionado tipo Jordi Wild. Contexto historico, conexiones inesperadas, analisis profundo. Con ejemplos DO/DON'T.
 
 ### 2.3 ElevenLabs — Text-to-Speech
 
@@ -174,8 +186,10 @@ Usuario configura preferencias → App busca noticias del dia → Claude genera 
 ### Plataforma
 PostgreSQL alojado en **Supabase** (plan gratis).
 
-### Migration
-Archivo: `supabase/migrations/001_initial_schema.sql`
+### Migrations
+- `supabase/migrations/001_initial_schema.sql` — Schema inicial (profiles, preferences, episodes, storage)
+- `supabase/migrations/002_add_voice_to_preferences.sql` — Campo voice en preferences
+- `supabase/migrations/003_add_survey_fields.sql` — Campos de encuesta personal en profiles
 
 ### Tablas
 
@@ -188,11 +202,18 @@ Archivo: `supabase/migrations/001_initial_schema.sql`
 | empresa | text | Empresa donde trabaja |
 | rol | text | Rol profesional (CEO, CTO, etc.) |
 | sector | text | Sector (Tech, Finanzas, Salud, etc.) |
+| edad | text | Edad o rango de edad ("25-34") |
+| ciudad | text | Ciudad del usuario |
+| nivel_conocimiento | text | Nivel: principiante, intermedio, experto |
+| objetivo_podcast | text | Objetivo: informarme, aprender, entretenerme |
+| horario_escucha | text | Horario: manana, mediodia, tarde, noche |
+| survey_completed | boolean | Flag de encuesta completada (default false) |
 | created_at | timestamptz | Fecha de creacion |
 | updated_at | timestamptz | Fecha de ultima actualizacion |
 
 - **Trigger**: Se crea automaticamente al registrarse (`handle_new_user`)
 - **RLS**: Cada usuario solo ve y edita su propio perfil
+- **Encuesta**: Los campos edad→horario_escucha se rellenan en el onboarding (paso 1). `survey_completed` permite al auth callback decidir a que paso redirigir.
 
 #### 3.2 `preferences` — Preferencias del podcast
 
@@ -207,7 +228,7 @@ Archivo: `supabase/migrations/001_initial_schema.sql`
 | updated_at | timestamptz | Fecha de ultima actualizacion |
 
 - **RLS**: Cada usuario solo ve, crea y edita sus propias preferencias
-- **BUG CONOCIDO**: No tiene campo `voice`. El frontend envia y usa `voice` pero no se persiste en Supabase (solo en localStorage)
+- Incluye campo `voice` (text, default 'female') para persistir la preferencia de voz
 
 #### 3.3 `episodes` — Episodios generados
 
@@ -254,12 +275,13 @@ No hay datos de seed. Las tablas se llenan desde la aplicacion.
 
 ### 4.2 URLs y dominios
 
-- **Vercel**: Dominio automatico de Vercel (no hay dominio custom configurado en el codigo)
+- **Vercel**: https://podcast-ai-sigma.vercel.app (dominio automatico de Vercel, no hay dominio custom)
 - **Supabase**: `https://dwvyqoooirmetsalgicw.supabase.co` (segun .env.local)
 
 ### 4.3 CI/CD
 
-- **Vercel Git Integration**: Probablemente conectado al repo de Git. Cada push a `master` dispara un deploy automatico.
+- **GitHub repo**: https://github.com/angideosuna/podcast-ai.git (rama `master`)
+- **Vercel**: Deploy manual con `npx vercel --prod` (el auto-deploy por push no esta activo)
 - **No hay**: Pipelines custom, GitHub Actions, Docker, ni scripts de deploy dedicados
 
 ### 4.4 Scripts disponibles
@@ -281,47 +303,59 @@ npm run lint     # ESLint
 1. Usuario abre la app
    └→ GET / → redirect a /onboarding
 
-2. Onboarding - Paso 1: Elegir temas
+2. Onboarding - Paso 1: Encuesta personal ("Cuentanos sobre ti")
+   └→ Inputs: nombre*, edad, ciudad, rol, sector
+   └→ Pickers: nivel_conocimiento* (principiante/intermedio/experto)
+   └→           objetivo_podcast* (informarme/aprender/entretenerme)
+   └→           horario_escucha* (manana/mediodia/tarde/noche)
+   └→ (* = obligatorio)
+   └→ POST /api/profile con survey_completed=true
+   └→ Pre-popula datos si el usuario ya tiene perfil
+
+3. Onboarding - Paso 2: Elegir temas
    └→ Selecciona 3-5 temas de los 8 disponibles
    └→ (tecnologia, IA, ciencia, politica, economia, startups, salud, cultura)
 
-3. Onboarding - Paso 2: Configurar podcast
+4. Onboarding - Paso 3: Configurar podcast
    └→ Elige duracion: 5 min (Express), 15 min (Estandar), 30 min (Deep Dive)
    └→ Elige tono: Casual, Profesional, Deep-dive
    └→ Elige voz: Femenina o Masculina
    └→ Click "Generar mi primer podcast"
 
-4. Guardar preferencias
+5. Guardar preferencias
    └→ Se guardan en localStorage (siempre)
    └→ Se envian a POST /api/preferences (si esta logueado, no bloquea si falla)
    └→ Redirect a /onboarding/confirmacion
 
-5. Confirmacion
-   └→ Muestra resumen de preferencias
+6. Confirmacion
+   └→ Muestra resumen del perfil (nombre, nivel, objetivo, rol)
+   └→ Muestra resumen de preferencias (temas, duracion, tono, voz)
    └→ Click "Generar mi primer podcast"
    └→ Redirect a /podcast
 
-6. Generacion del podcast (pagina /podcast)
+7. Generacion del podcast (pagina /podcast)
    └→ Fase 1 "Buscando noticias..." (800ms UI delay)
    └→ POST /api/generate-podcast con {topics, duration, tone}
       ├→ fetchNews(topics)
       │    └→ GET gnews.io/api/v4/search?q=...&lang=es&max=10
       │    └→ Devuelve array de Article[]
-      ├→ generateScript(articles, duration, tone)
+      ├→ Fetch perfil del usuario (nombre, nivel, objetivo, horario...)
+      ├→ generateScript(articles, duration, tone, adjustments, profile)
       │    └→ Construye prompt con noticias + formato + estilo
+      │    └→ Inyecta bloque "PERFIL DEL OYENTE" si hay perfil
       │    └→ POST a Claude API (claude-sonnet-4)
-      │    └→ Devuelve guion en Markdown
+      │    └→ Devuelve guion en Markdown personalizado al perfil
       └→ Guarda episodio en Supabase (si autenticado)
    └→ Fase 2 "Generando guion..."
    └→ Fase 3 "Listo!"
 
-7. Mostrar resultado
+8. Mostrar resultado
    └→ Guion renderizado (Markdown → HTML)
    └→ Lista de fuentes/articulos usados
    └→ BrowserAudioPlayer en la parte inferior
    └→ Botones: Regenerar, Ajustar, Cambiar preferencias
 
-8. Escuchar el podcast
+9. Escuchar el podcast
    └→ Opcion A (Web Speech API): Click Play → Navegador lee el guion en voz alta
    └→ Opcion B (ElevenLabs): POST /api/generate-audio → Genera MP3 → AudioPlayer
 ```
@@ -331,7 +365,10 @@ npm run lint     # ESLint
 ```
 1. Login → /login
    └→ Email + password → Supabase Auth
-   └→ Redirect a /dashboard
+   └→ Auth callback con routing de 3 vias:
+      ├→ Tiene preferences → /dashboard
+      ├→ Tiene survey_completed pero no preferences → /onboarding?step=2
+      └→ No tiene survey → /onboarding
 
 2. Dashboard
    └→ Saludo contextual (Buenos dias/tardes/noches, Nombre)
@@ -374,18 +411,20 @@ npm run lint     # ESLint
 
 | Feature | Estado | Notas |
 |---------|--------|-------|
-| Onboarding completo | OK | 2 pasos: temas + config |
+| Onboarding completo | OK | 3 pasos: encuesta personal + temas + config |
+| Encuesta personal | OK | Paso 1 del onboarding: nombre, edad, ciudad, nivel, objetivo, horario |
+| Personalizacion por perfil | OK | Bloque "PERFIL DEL OYENTE" inyectado en prompt de Claude |
 | Busqueda de noticias | OK | GNews API, 100 req/dia gratis |
-| Generacion de guion con Claude | OK | claude-sonnet-4, prompt detallado |
+| Generacion de guion con Claude | OK | claude-sonnet-4, system prompt con personalidad + prompts v2 con variabilidad |
 | Reproduccion con Web Speech API | OK | Fallback gratuito, voces es-ES |
 | Generacion de audio ElevenLabs | OK | Requiere API key |
 | Auth (registro, login, logout) | OK | Supabase Auth con email |
-| Confirmacion de email | OK | Callback en /auth/callback |
-| Middleware de rutas protegidas | OK | Renombrado de proxy.ts a middleware.ts |
+| Confirmacion de email | OK | Callback en /auth/callback con routing de 3 vias |
+| Middleware de rutas protegidas | OK | proxy.ts (Middleware/Proxy de Next.js) |
 | Dashboard con episodio del dia | OK | Saludo contextual, stats |
 | Historial de episodios | OK | Lista + detalle |
 | Detalle de episodio con audio | OK | Genera audio bajo demanda |
-| Perfil de usuario editable | OK | Nombre, empresa, rol, sector |
+| Perfil de usuario editable | OK | Nombre, empresa, rol, sector, edad, ciudad + dropdowns nivel/objetivo/horario |
 | Ajustar episodio del dia | OK | Sugerencias rapidas + texto libre |
 | Guardar en Supabase | OK | Episodios, preferencias, perfiles |
 | Upload audio a Storage | OK | MP3 en bucket publico |
@@ -397,14 +436,12 @@ npm run lint     # ESLint
 
 | Bug | Severidad | Detalle |
 |-----|-----------|---------|
-| Campo `voice` no se persiste en Supabase | **Media** | La tabla `preferences` no tiene columna `voice`. El frontend lo envia en POST pero Supabase lo ignora. Solo se guarda en localStorage. Si el usuario borra cache o usa otro dispositivo, pierde la preferencia de voz. |
 | Concatenacion de MP3 cruda | **Baja** | Cuando el guion es largo y se divide en chunks, los buffers MP3 se concatenan byte a byte. Esto puede causar glitches de audio en los cortes entre fragmentos. Lo correcto seria usar un muxer MP3. |
 
 ### 6.3 Cosas pendientes / mejorables
 
 | Pendiente | Prioridad | Detalle |
 |-----------|-----------|---------|
-| Anadir `voice` a tabla `preferences` | Alta | Crear migration: `ALTER TABLE preferences ADD COLUMN voice text DEFAULT 'female'` |
 | Cache de noticias | Media | GNews tiene limite de 100 req/dia. No hay cache. Deberia cachear por topic + fecha. |
 | Paginacion en historial | Baja | Carga todos los episodios de golpe. Con muchos episodios sera lento. |
 | Tests unitarios | Media | No hay ni un test. Al menos testear newsapi.ts, generate-script.ts y elevenlabs.ts. |
@@ -414,18 +451,18 @@ npm run lint     # ESLint
 | Filtros en historial | Baja | No se puede filtrar por tema, tono o fecha. |
 | Soporte offline / PWA | Baja | No hay Service Worker ni manifiesto PWA. |
 
-### 6.4 Dependencias sin configurar (segun .env.example)
+### 6.4 Variables de entorno (todas configuradas)
 
-Si alguien clona el proyecto, necesita configurar:
+Todas las variables estan configuradas en `.env.local`. Para referencia:
 
-| Variable | Obligatoria | Donde obtenerla |
-|----------|-------------|-----------------|
-| `GNEWS_API_KEY` | Si | https://gnews.io (gratis, registro) |
-| `ANTHROPIC_API_KEY` | Si | https://console.anthropic.com (de pago) |
-| `ELEVENLABS_API_KEY` | No* | https://elevenlabs.io (hay plan gratis limitado) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Si | Panel de Supabase → Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Si | Panel de Supabase → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Si** | Panel de Supabase → Settings → API |
+| Variable | Obligatoria | Estado |
+|----------|-------------|--------|
+| `GNEWS_API_KEY` | Si | Configurada |
+| `ANTHROPIC_API_KEY` | Si | Configurada |
+| `ELEVENLABS_API_KEY` | No* | Configurada |
+| `NEXT_PUBLIC_SUPABASE_URL` | Si | Configurada |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Si | Configurada |
+| `SUPABASE_SERVICE_ROLE_KEY` | No** | Configurada |
 
 (*) Sin ElevenLabs funciona igual usando Web Speech API del navegador
 (**) Declarado en .env.example pero no se usa activamente en el codigo
@@ -449,9 +486,9 @@ podcast-ai/
 │   ├── login/page.tsx            # Login
 │   ├── signup/page.tsx           # Registro
 │   ├── onboarding/
-│   │   ├── page.tsx              # Configuracion de preferencias
-│   │   └── confirmacion/page.tsx # Confirmacion
-│   ├── perfil/page.tsx           # Editar perfil
+│   │   ├── page.tsx              # Onboarding 3 pasos: encuesta + temas + config
+│   │   └── confirmacion/page.tsx # Confirmacion con resumen perfil + preferencias
+│   ├── perfil/page.tsx           # Editar perfil (datos personales + preferencias podcast)
 │   ├── podcast/page.tsx          # Generacion y vista del podcast
 │   ├── layout.tsx                # Root layout (fuentes, metadata, dark mode)
 │   ├── globals.css               # Estilos globales + shadcn variables
@@ -467,16 +504,17 @@ podcast-ai/
 │   ├── duration-picker.tsx       # Selector de duracion (5/15/30)
 │   ├── tone-picker.tsx           # Selector de tono
 │   ├── voice-picker.tsx          # Selector de voz (M/F)
+│   ├── option-picker.tsx         # Picker generico reutilizable (nivel, objetivo, horario)
 │   ├── topic-card.tsx            # Tarjeta de tema seleccionable
 │   └── nav-header.tsx            # Navegacion principal (desktop + mobile)
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts             # Cliente Supabase para el navegador
 │   │   └── server.ts             # Cliente Supabase para el servidor
-│   ├── types.ts                  # Tipos TypeScript centralizados
+│   ├── types.ts                  # Tipos TypeScript centralizados + label constants
 │   ├── logger.ts                 # Logger profesional con contexto
 │   ├── newsapi.ts                # Servicio GNews
-│   ├── generate-script.ts        # Generacion de guiones con Claude
+│   ├── generate-script.ts        # Generacion de guiones con Claude + personalizacion por perfil
 │   ├── elevenlabs.ts             # TTS con ElevenLabs
 │   ├── tts-utils.ts              # Limpieza de guion para TTS
 │   ├── markdown.ts               # Renderizado Markdown → HTML
@@ -485,12 +523,14 @@ podcast-ai/
 │   └── utils.ts                  # Utilidad cn() para clases CSS
 ├── supabase/
 │   └── migrations/
-│       └── 001_initial_schema.sql  # Schema completo (3 tablas + storage + RLS)
+│       ├── 001_initial_schema.sql  # Schema completo (3 tablas + storage + RLS)
+│       ├── 002_add_voice_to_preferences.sql  # Campo voice en preferences
+│       └── 003_add_survey_fields.sql  # Campos encuesta personal en profiles
 ├── episodios/
 │   └── 2026-02-18-briefing.md    # Episodio de ejemplo generado
 ├── public/                       # SVGs estaticos (file, globe, next, vercel, window)
 ├── .claude/                      # Configuracion de Claude Code (CLAUDE.md, skills, commands)
-├── middleware.ts                 # Middleware Next.js (auth + sesion)
+├── proxy.ts                     # Middleware/Proxy Next.js (auth + sesion)
 ├── next.config.ts                # Config Next.js (imagenes Supabase)
 ├── tsconfig.json                 # TypeScript strict mode + path aliases
 ├── eslint.config.mjs             # ESLint + Next.js rules
@@ -508,12 +548,14 @@ podcast-ai/
 
 ## Apendice: Credenciales necesarias
 
-Para tener el proyecto funcionando al 100%, necesitas cuentas en:
+Todas las cuentas estan creadas y configuradas en `.env.local`:
 
-1. **GNews** (https://gnews.io) — API key gratis, 100 req/dia
-2. **Anthropic** (https://console.anthropic.com) — API key de pago para Claude
-3. **ElevenLabs** (https://elevenlabs.io) — API key opcional, hay plan gratis limitado
-4. **Supabase** (https://supabase.com) — Proyecto gratis con PostgreSQL + Auth + Storage
-5. **Vercel** (https://vercel.com) — Hosting gratis para Next.js
+| Servicio | Estado | Plan | Donde obtenerla |
+|----------|--------|------|-----------------|
+| **GNews** | Configurado | Gratis (100 req/dia) | https://gnews.io |
+| **Anthropic** | Configurado | De pago | https://console.anthropic.com |
+| **ElevenLabs** | Configurado | De pago | https://elevenlabs.io |
+| **Supabase** | Configurado | Gratis | https://supabase.com |
+| **Vercel** | Configurado | Gratis | https://vercel.com |
 
-Copia `.env.example` a `.env.local` y rellena los valores. Ejecuta la migration SQL en el editor de Supabase.
+Si alguien clona el proyecto: copiar `.env.example` a `.env.local`, rellenar los valores, y ejecutar la migration SQL en el editor de Supabase.
