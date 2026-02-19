@@ -6,6 +6,7 @@ import { TOPICS, MIN_TOPICS, MAX_TOPICS } from "@/lib/topics";
 import { TopicCard } from "@/components/topic-card";
 import { DurationPicker } from "@/components/duration-picker";
 import { TonePicker } from "@/components/tone-picker";
+import { VoicePicker } from "@/components/voice-picker";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function OnboardingPage() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [duration, setDuration] = useState<number | null>(null);
   const [tone, setTone] = useState<string | null>(null);
+  const [voice, setVoice] = useState<string | null>(null);
 
   // Alternar selección de tema
   const toggleTopic = (topicId: string) => {
@@ -27,7 +29,7 @@ export default function OnboardingPage() {
 
   // Validaciones
   const canGoNext = selectedTopics.length >= MIN_TOPICS;
-  const canFinish = duration !== null && tone !== null;
+  const canFinish = duration !== null && tone !== null && voice !== null;
 
   // Guardar preferencias en localStorage + Supabase y redirigir
   const handleFinish = async () => {
@@ -35,6 +37,7 @@ export default function OnboardingPage() {
       topics: selectedTopics,
       duration,
       tone,
+      voice,
       createdAt: new Date().toISOString(),
     };
 
@@ -46,7 +49,7 @@ export default function OnboardingPage() {
       await fetch("/api/preferences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topics: selectedTopics, duration, tone }),
+        body: JSON.stringify({ topics: selectedTopics, duration, tone, voice }),
       });
     } catch {
       // Silencioso: localStorage sirve como fallback
@@ -148,6 +151,7 @@ export default function OnboardingPage() {
 
             <DurationPicker selected={duration} onSelect={setDuration} />
             <TonePicker selected={tone} onSelect={setTone} />
+            <VoicePicker selected={voice} onSelect={setVoice} />
 
             {/* Botones de navegación */}
             <div className="flex items-center justify-center gap-4 pt-4">
