@@ -1,7 +1,10 @@
 // Generación de guion de podcast usando Claude API
 
 import Anthropic from "@anthropic-ai/sdk";
-import { Article } from "./newsapi";
+import type { Article } from "@/lib/types";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("generate-script");
 
 // Número de noticias según duración del podcast
 const ARTICLES_BY_DURATION: Record<number, number> = {
@@ -36,6 +39,7 @@ export async function generateScript(
     throw new Error("ANTHROPIC_API_KEY no está configurada en las variables de entorno");
   }
 
+  log.info(`Generando guion: ${duration} min, tono ${tone}, ${articles.length} artículos`);
   const client = new Anthropic({ apiKey });
 
   const articleCount = ARTICLES_BY_DURATION[duration] || 5;
@@ -136,5 +140,6 @@ ${toneInstruction}
     throw new Error("No se recibió texto en la respuesta de Claude");
   }
 
+  log.info(`Guion generado: ${textBlock.text.length} caracteres`);
   return textBlock.text;
 }

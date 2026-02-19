@@ -1,43 +1,18 @@
 // Integración con ElevenLabs para generar audio del podcast
 
+import { cleanScriptForTTS } from "@/lib/tts-utils";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("elevenlabs");
 const ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech";
-const DEFAULT_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku"; // Lily - voz femenina en español
+// Voces por género (con acento castellano usando eleven_multilingual_v2)
+const VOICE_IDS: Record<string, string> = {
+  female: "pFZP5JQG7iQjIQuC4Bku", // Lily - voz femenina
+  male: "onwK4e9ZLuTAKqWW03F9",   // Daniel - voz masculina
+};
+const DEFAULT_VOICE_ID = VOICE_IDS.female;
 const MODEL_ID = "eleven_multilingual_v2";
 const MAX_CHARS_PER_REQUEST = 5000;
-
-/**
- * Limpia el guion Markdown para que suene natural en TTS.
- * Elimina headers, bold, separadores, anotaciones de tiempo, etc.
- */
-export function cleanScriptForTTS(script: string): string {
-  return (
-    script
-      // Eliminar línea de metadatos final (*Duración estimada...*)
-      .replace(/^\*Duración estimada:.*\*$/gm, "")
-      // Eliminar anotaciones de tiempo [INTRO - 30 segundos], [NOTICIA 1 - 60 segundos], etc.
-      .replace(/\[.*?\d+\s*segundos?\]/g, "")
-      // Eliminar headers markdown (# ## ###) pero conservar el texto
-      .replace(/^#{1,3}\s+/gm, "")
-      // Eliminar separadores ---
-      .replace(/^---$/gm, "")
-      // Eliminar bold **texto** → texto
-      .replace(/\*\*(.+?)\*\*/g, "$1")
-      // Eliminar italic *texto* → texto
-      .replace(/\*(.+?)\*/g, "$1")
-      // Eliminar enlaces markdown [texto](url) → texto
-      .replace(/\[(.+?)\]\(.+?\)/g, "$1")
-      // Eliminar emojis comunes de los títulos
-      .replace(
-        /[\u{1F3A7}\u{1F399}\u{1F4F0}\u{1F4E1}\u{2705}\u{274C}\u{1F525}\u{1F680}\u{1F4A1}\u{1F4CA}\u{1F3DB}\u{1F3E5}\u{1F3AD}\u{1F4BB}\u{1F916}\u{1F52C}\u{1F4C8}]/gu,
-        ""
-      )
-      // Colapsar múltiples líneas vacías en una sola pausa
-      .replace(/\n{3,}/g, "\n\n")
-      // Limpiar espacios extra
-      .replace(/  +/g, " ")
-      .trim()
-  );
-}
 
 /**
  * Divide el guion en secciones por separadores (---) para respetar
@@ -84,6 +59,7 @@ async function generateChunkAudio(
     body: JSON.stringify({
       text,
       model_id: MODEL_ID,
+      language_code: "es",
       voice_settings: {
         stability: 0.5,
         similarity_boost: 0.75,
@@ -110,7 +86,7 @@ async function generateChunkAudio(
  * Genera el audio completo del podcast.
  * Para scripts largos, divide en secciones y concatena los buffers.
  */
-export async function generateAudio(script: string): Promise<Buffer> {
+export async function generateAudio(script: string, voice?: string): Promise<Buffer> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -118,7 +94,9 @@ export async function generateAudio(script: string): Promise<Buffer> {
     );
   }
 
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
+  // Seleccionar voz según preferencia del usuario
+  const voiceId = process.env.ELEVENLABS_VOICE_ID || (voice && VOICE_IDS[voice]) || DEFAULT_VOICE_ID;
+  log.info(`Generando audio con voz ${voice || "default"} (ID: ${voiceId})`);
   const cleanedScript = cleanScriptForTTS(script);
 
   // Si el texto cabe en una sola petición, generar directamente
@@ -133,6 +111,7 @@ export async function generateAudio(script: string): Promise<Buffer> {
 
   // Para textos largos, dividir y concatenar
   const chunks = splitScript(cleanedScript);
+  log.info(`Script dividido en ${chunks.length} fragmentos para TTS`);
   const audioBuffers: ArrayBuffer[] = [];
 
   for (const chunk of chunks) {

@@ -1,12 +1,11 @@
 // Integracion con GNews para obtener noticias del dia
 
-export interface Article {
-  title: string;
-  description: string;
-  source: string;
-  url: string;
-  publishedAt: string;
-}
+import { createLogger } from "@/lib/logger";
+import type { Article } from "@/lib/types";
+
+export type { Article };
+
+const log = createLogger("newsapi");
 
 // Mapeo de topic IDs del onboarding a terminos de busqueda
 const TOPIC_SEARCH_TERMS: Record<string, string> = {
@@ -26,8 +25,10 @@ export async function fetchNews(
 ): Promise<Article[]> {
   const apiKey = process.env.GNEWS_API_KEY;
   if (!apiKey) {
-    throw new Error("GNEWS_API_KEY no esta configurada en las variables de entorno");
+    throw new Error("GNEWS_API_KEY no está configurada en las variables de entorno");
   }
+
+  log.info(`Buscando noticias para topics: ${topics.join(", ")}`);
 
   // Combinar los terminos de busqueda de todos los topics seleccionados
   const searchTerms = topics
@@ -65,6 +66,8 @@ export async function fetchNews(
   if (!data.articles || data.articles.length === 0) {
     throw new Error("No se encontraron noticias para los temas seleccionados");
   }
+
+  log.info(`GNews devolvió ${data.articles.length} artículos`);
 
   // Mapear al formato tipado
   return data.articles
