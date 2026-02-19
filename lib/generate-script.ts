@@ -153,6 +153,67 @@ function pickRandom<T>(arr: T[]): T {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// PERFIL DEL OYENTE — Construir bloque contextual a partir del perfil
+// ──────────────────────────────────────────────────────────────────────────────
+
+function buildProfileBlock(profile: Record<string, string | null> | null | undefined): string {
+  if (!profile) return "";
+
+  const lines: string[] = [];
+
+  if (profile.nombre) {
+    lines.push(`- El oyente se llama **${profile.nombre}**. Puedes mencionarlo de forma natural si encaja.`);
+  }
+  if (profile.rol) {
+    lines.push(`- Trabaja como ${profile.rol}${profile.sector ? ` en el sector ${profile.sector}` : ""}.`);
+  } else if (profile.sector) {
+    lines.push(`- Trabaja en el sector ${profile.sector}.`);
+  }
+  if (profile.edad) {
+    lines.push(`- Tiene ${profile.edad} años.`);
+  }
+  if (profile.ciudad) {
+    lines.push(`- Vive en ${profile.ciudad}.`);
+  }
+
+  // Nivel de conocimiento
+  if (profile.nivel_conocimiento === "principiante") {
+    lines.push(`- Nivel principiante: explica conceptos sin asumir conocimiento previo, usa analogías sencillas.`);
+  } else if (profile.nivel_conocimiento === "intermedio") {
+    lines.push(`- Nivel intermedio: puede usar terminología del sector pero explica los conceptos más avanzados.`);
+  } else if (profile.nivel_conocimiento === "experto") {
+    lines.push(`- Nivel experto: usa terminología técnica, ve directo al análisis avanzado, no expliques lo básico.`);
+  }
+
+  // Objetivo
+  if (profile.objetivo_podcast === "informarme") {
+    lines.push(`- Objetivo: informarse. Prioriza datos clave y resúmenes claros, ve al grano.`);
+  } else if (profile.objetivo_podcast === "aprender") {
+    lines.push(`- Objetivo: aprender en profundidad. Añade contexto, conexiones entre temas y análisis detallado.`);
+  } else if (profile.objetivo_podcast === "entretenerme") {
+    lines.push(`- Objetivo: entretenerse. Contenido dinámico, divertido, con personalidad y ritmo ágil.`);
+  }
+
+  // Horario
+  if (profile.horario_escucha === "manana") {
+    lines.push(`- Escucha por la mañana: energía para empezar el día, tono motivador y dinámico.`);
+  } else if (profile.horario_escucha === "mediodia") {
+    lines.push(`- Escucha al mediodía: tono equilibrado, buen ritmo para la pausa del día.`);
+  } else if (profile.horario_escucha === "tarde") {
+    lines.push(`- Escucha por la tarde: tono reflexivo pero entretenido.`);
+  } else if (profile.horario_escucha === "noche") {
+    lines.push(`- Escucha por la noche: tono relajado y de cierre del día, sin exceso de energía.`);
+  }
+
+  if (lines.length === 0) return "";
+
+  return `\n\n## PERFIL DEL OYENTE
+
+Adapta el contenido y el tono teniendo en cuenta este perfil:
+${lines.join("\n")}`;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // FUNCIÓN PRINCIPAL
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -160,7 +221,8 @@ export async function generateScript(
   articles: Article[],
   duration: number,
   tone: string,
-  adjustments?: string
+  adjustments?: string,
+  profile?: Record<string, string | null> | null
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -202,6 +264,9 @@ export async function generateScript(
 
   const wordsPerMinute = 160;
   const totalWords = duration * wordsPerMinute;
+
+  // Construir bloque de perfil del oyente
+  const profileBlock = buildProfileBlock(profile);
 
   const prompt = `Escribe el guion de mi podcast de hoy. Duración: ~${duration} minutos (~${totalWords} palabras).
 Fecha: ${today}.
@@ -245,7 +310,7 @@ Escribe en Markdown:
 2. NO inventes datos ni noticias. Usa SOLO la información proporcionada.
 3. El guion es para LEER EN VOZ ALTA. Cada frase debe sonar natural hablada.
 4. ~${wordsPerMinute} palabras por minuto de audio. Total: ~${totalWords} palabras.
-5. Sé humano. Sé real. Sé interesante. Si un trozo suena a "generado por IA", reescríbelo.${
+5. Sé humano. Sé real. Sé interesante. Si un trozo suena a "generado por IA", reescríbelo.${profileBlock}${
     adjustments
       ? `\n\n## AJUSTES DEL USUARIO\n\nEl oyente ha pedido estos cambios:\n${adjustments}\n\nAdapta el contenido según estas indicaciones.`
       : ""

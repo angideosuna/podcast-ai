@@ -56,6 +56,12 @@ export interface Profile {
   empresa: string | null;
   rol: string | null;
   sector: string | null;
+  edad: string | null;
+  ciudad: string | null;
+  nivel_conocimiento: string | null;
+  objetivo_podcast: string | null;
+  horario_escucha: string | null;
+  survey_completed: boolean;
   email?: string;
 }
 
@@ -78,4 +84,23 @@ export const TONE_LABELS: Record<string, string> = {
 export const VOICE_LABELS: Record<string, string> = {
   female: "Voz femenina",
   male: "Voz masculina",
+};
+
+export const NIVEL_CONOCIMIENTO_LABELS: Record<string, string> = {
+  principiante: "Principiante",
+  intermedio: "Intermedio",
+  experto: "Experto",
+};
+
+export const OBJETIVO_PODCAST_LABELS: Record<string, string> = {
+  informarme: "Informarme",
+  aprender: "Aprender en profundidad",
+  entretenerme: "Entretenerme",
+};
+
+export const HORARIO_ESCUCHA_LABELS: Record<string, string> = {
+  manana: "Mañana",
+  mediodia: "Mediodía",
+  tarde: "Tarde",
+  noche: "Noche",
 };

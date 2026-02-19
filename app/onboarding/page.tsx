@@ -1,20 +1,85 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TOPICS, MIN_TOPICS, MAX_TOPICS } from "@/lib/topics";
 import { TopicCard } from "@/components/topic-card";
 import { DurationPicker } from "@/components/duration-picker";
 import { TonePicker } from "@/components/tone-picker";
 import { VoicePicker } from "@/components/voice-picker";
+import { OptionPicker } from "@/components/option-picker";
 
-export default function OnboardingPage() {
+const NIVEL_OPTIONS = [
+  { value: "principiante", label: "Principiante", emoji: "🌱", descripcion: "Estoy empezando en estos temas" },
+  { value: "intermedio", label: "Intermedio", emoji: "📚", descripcion: "Tengo conocimientos básicos" },
+  { value: "experto", label: "Experto", emoji: "🎓", descripcion: "Domino los temas en profundidad" },
+];
+
+const OBJETIVO_OPTIONS = [
+  { value: "informarme", label: "Informarme", emoji: "📰", descripcion: "Estar al día con lo esencial" },
+  { value: "aprender", label: "Aprender", emoji: "🧠", descripcion: "Profundizar y entender en detalle" },
+  { value: "entretenerme", label: "Entretenerme", emoji: "🎧", descripcion: "Pasarlo bien mientras escucho" },
+];
+
+const HORARIO_OPTIONS = [
+  { value: "manana", label: "Mañana", emoji: "🌅" },
+  { value: "mediodia", label: "Mediodía", emoji: "☀️" },
+  { value: "tarde", label: "Tarde", emoji: "🌇" },
+  { value: "noche", label: "Noche", emoji: "🌙" },
+];
+
+function OnboardingContent() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const searchParams = useSearchParams();
+  const initialStep = Number(searchParams.get("step")) || 1;
+
+  const [step, setStep] = useState(initialStep);
+
+  // Step 1 — Encuesta personal
+  const [nombre, setNombre] = useState("");
+  const [edad, setEdad] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [rol, setRol] = useState("");
+  const [sector, setSector] = useState("");
+  const [nivelConocimiento, setNivelConocimiento] = useState<string | null>(null);
+  const [objetivoPodcast, setObjetivoPodcast] = useState<string | null>(null);
+  const [horarioEscucha, setHorarioEscucha] = useState<string | null>(null);
+  const [surveyLoaded, setSurveyLoaded] = useState(false);
+
+  // Step 2 — Temas
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+
+  // Step 3 — Configuración
   const [duration, setDuration] = useState<number | null>(null);
   const [tone, setTone] = useState<string | null>(null);
   const [voice, setVoice] = useState<string | null>(null);
+
+  // Cargar perfil existente para pre-popular
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const res = await fetch("/api/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.profile) {
+          const p = data.profile;
+          if (p.nombre) setNombre(p.nombre);
+          if (p.edad) setEdad(p.edad);
+          if (p.ciudad) setCiudad(p.ciudad);
+          if (p.rol) setRol(p.rol);
+          if (p.sector) setSector(p.sector);
+          if (p.nivel_conocimiento) setNivelConocimiento(p.nivel_conocimiento);
+          if (p.objetivo_podcast) setObjetivoPodcast(p.objetivo_podcast);
+          if (p.horario_escucha) setHorarioEscucha(p.horario_escucha);
+        }
+      } catch {
+        // Silencioso — el usuario puede no estar autenticado
+      } finally {
+        setSurveyLoaded(true);
+      }
+    }
+    loadProfile();
+  }, []);
 
   // Alternar selección de tema
   const toggleTopic = (topicId: string) => {
@@ -28,10 +93,39 @@ export default function OnboardingPage() {
   };
 
   // Validaciones
-  const canGoNext = selectedTopics.length >= MIN_TOPICS;
+  const canGoToStep2 =
+    nombre.trim() !== "" &&
+    nivelConocimiento !== null &&
+    objetivoPodcast !== null &&
+    horarioEscucha !== null;
+  const canGoToStep3 = selectedTopics.length >= MIN_TOPICS;
   const canFinish = duration !== null && tone !== null && voice !== null;
 
-  // Guardar preferencias en localStorage + Supabase y redirigir
+  // Guardar encuesta y avanzar a Step 2
+  const handleSaveSurvey = async () => {
+    try {
+      await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre,
+          edad: edad || null,
+          ciudad: ciudad || null,
+          rol: rol || null,
+          sector: sector || null,
+          nivel_conocimiento: nivelConocimiento,
+          objetivo_podcast: objetivoPodcast,
+          horario_escucha: horarioEscucha,
+          survey_completed: true,
+        }),
+      });
+    } catch {
+      // Silencioso — continúa al siguiente paso
+    }
+    setStep(2);
+  };
+
+  // Guardar preferencias y finalizar
   const handleFinish = async () => {
     const preferences = {
       topics: selectedTopics,
@@ -41,10 +135,8 @@ export default function OnboardingPage() {
       createdAt: new Date().toISOString(),
     };
 
-    // Guardar siempre en localStorage (caché local)
     localStorage.setItem("podcast-ai-preferences", JSON.stringify(preferences));
 
-    // Intentar guardar en Supabase (no bloquea si falla)
     try {
       await fetch("/api/preferences", {
         method: "POST",
@@ -59,22 +151,22 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-stone-100 text-stone-900">
       {/* Barra de progreso */}
-      <div className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 border-b border-stone-200 bg-stone-100/80 backdrop-blur-sm">
         <div className="mx-auto max-w-4xl px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">
-              <span className="text-blue-400">PodCast</span>
-              <span className="text-violet-400">.ai</span>
+              <span className="text-stone-900">PodCast</span>
+              <span className="text-stone-400">.ai</span>
             </h1>
-            <span className="text-sm text-slate-400">Paso {step} de 2</span>
+            <span className="text-sm text-stone-500">Paso {step} de 3</span>
           </div>
           {/* Barra visual */}
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-stone-200">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-500"
-              style={{ width: `${(step / 2) * 100}%` }}
+              className="h-full rounded-full bg-stone-900 transition-all duration-500"
+              style={{ width: `${(step / 3) * 100}%` }}
             />
           </div>
         </div>
@@ -82,12 +174,140 @@ export default function OnboardingPage() {
 
       {/* Contenido principal */}
       <main className="mx-auto max-w-4xl px-4 py-10">
-        {/* ========== PASO 1: Elegir temas ========== */}
+        {/* ========== PASO 1: Encuesta personal ========== */}
         {step === 1 && (
           <div className="space-y-8">
             <div className="text-center">
+              <h2 className="text-3xl font-bold">Cuéntanos sobre ti</h2>
+              <p className="mt-2 text-stone-500">
+                Personaliza tu experiencia para que cada podcast sea único
+              </p>
+            </div>
+
+            {/* Formulario de datos personales */}
+            <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-6">
+              <div>
+                <label htmlFor="nombre" className="mb-1.5 block text-sm font-medium text-stone-700">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="nombre"
+                  type="text"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  placeholder="Tu nombre"
+                  className="w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-stone-900 placeholder-stone-400 transition-colors focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400"
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="edad" className="mb-1.5 block text-sm font-medium text-stone-700">
+                    Edad
+                  </label>
+                  <input
+                    id="edad"
+                    type="text"
+                    value={edad}
+                    onChange={(e) => setEdad(e.target.value)}
+                    placeholder="Ej: 25-34"
+                    className="w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-stone-900 placeholder-stone-400 transition-colors focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="ciudad" className="mb-1.5 block text-sm font-medium text-stone-700">
+                    Ciudad
+                  </label>
+                  <input
+                    id="ciudad"
+                    type="text"
+                    value={ciudad}
+                    onChange={(e) => setCiudad(e.target.value)}
+                    placeholder="Ej: Madrid"
+                    className="w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-stone-900 placeholder-stone-400 transition-colors focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="rol" className="mb-1.5 block text-sm font-medium text-stone-700">
+                    Rol
+                  </label>
+                  <input
+                    id="rol"
+                    type="text"
+                    value={rol}
+                    onChange={(e) => setRol(e.target.value)}
+                    placeholder="Ej: CEO, CTO, Marketing..."
+                    className="w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-stone-900 placeholder-stone-400 transition-colors focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="sector" className="mb-1.5 block text-sm font-medium text-stone-700">
+                    Sector
+                  </label>
+                  <input
+                    id="sector"
+                    type="text"
+                    value={sector}
+                    onChange={(e) => setSector(e.target.value)}
+                    placeholder="Ej: Tech, Finanzas, Salud..."
+                    className="w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-stone-900 placeholder-stone-400 transition-colors focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Pickers */}
+            <OptionPicker
+              title="Nivel de conocimiento *"
+              options={NIVEL_OPTIONS}
+              selected={nivelConocimiento}
+              onSelect={setNivelConocimiento}
+              columns={3}
+            />
+
+            <OptionPicker
+              title="Objetivo del podcast *"
+              options={OBJETIVO_OPTIONS}
+              selected={objetivoPodcast}
+              onSelect={setObjetivoPodcast}
+              columns={3}
+            />
+
+            <OptionPicker
+              title="Horario de escucha *"
+              options={HORARIO_OPTIONS}
+              selected={horarioEscucha}
+              onSelect={setHorarioEscucha}
+              columns={4}
+            />
+
+            {/* Botón siguiente */}
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={handleSaveSurvey}
+                disabled={!canGoToStep2}
+                className={`
+                  rounded-full px-8 py-3 text-lg font-semibold transition-all duration-200
+                  ${
+                    canGoToStep2
+                      ? "bg-stone-900 text-white hover:opacity-90 shadow-md shadow-stone-300/50 cursor-pointer"
+                      : "bg-stone-200 text-stone-400 cursor-not-allowed"
+                  }
+                `}
+              >
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========== PASO 2: Elegir temas ========== */}
+        {step === 2 && (
+          <div className="space-y-8">
+            <div className="text-center">
               <h2 className="text-3xl font-bold">Elige tus temas de interés</h2>
-              <p className="mt-2 text-slate-400">
+              <p className="mt-2 text-stone-500">
                 Selecciona entre {MIN_TOPICS} y {MAX_TOPICS} temas para personalizar tu podcast diario
               </p>
             </div>
@@ -97,8 +317,8 @@ export default function OnboardingPage() {
               <span
                 className={`rounded-full px-4 py-1.5 text-sm font-medium ${
                   selectedTopics.length >= MIN_TOPICS
-                    ? "bg-blue-500/20 text-blue-400"
-                    : "bg-slate-800 text-slate-400"
+                    ? "bg-stone-800/8 text-stone-900"
+                    : "bg-stone-200 text-stone-500"
                 }`}
               >
                 {selectedTopics.length} de {MAX_TOPICS} seleccionados
@@ -119,17 +339,23 @@ export default function OnboardingPage() {
               ))}
             </div>
 
-            {/* Botón siguiente */}
-            <div className="flex justify-center pt-4">
+            {/* Botones de navegación */}
+            <div className="flex items-center justify-center gap-4 pt-4">
               <button
-                onClick={() => setStep(2)}
-                disabled={!canGoNext}
+                onClick={() => setStep(1)}
+                className="rounded-full border border-stone-300 px-6 py-3 font-medium text-stone-700 transition-colors hover:border-stone-400 hover:text-stone-900 cursor-pointer"
+              >
+                ← Atrás
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!canGoToStep3}
                 className={`
                   rounded-full px-8 py-3 text-lg font-semibold transition-all duration-200
                   ${
-                    canGoNext
-                      ? "bg-gradient-to-r from-blue-500 to-violet-500 text-white hover:from-blue-600 hover:to-violet-600 shadow-lg shadow-blue-500/25 cursor-pointer"
-                      : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                    canGoToStep3
+                      ? "bg-stone-900 text-white hover:opacity-90 shadow-md shadow-stone-300/50 cursor-pointer"
+                      : "bg-stone-200 text-stone-400 cursor-not-allowed"
                   }
                 `}
               >
@@ -139,12 +365,12 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ========== PASO 2: Duración y tono ========== */}
-        {step === 2 && (
+        {/* ========== PASO 3: Duración y tono ========== */}
+        {step === 3 && (
           <div className="space-y-10">
             <div className="text-center">
               <h2 className="text-3xl font-bold">Configura tu podcast</h2>
-              <p className="mt-2 text-slate-400">
+              <p className="mt-2 text-stone-500">
                 Elige la duración y el estilo que prefieras
               </p>
             </div>
@@ -156,8 +382,8 @@ export default function OnboardingPage() {
             {/* Botones de navegación */}
             <div className="flex items-center justify-center gap-4 pt-4">
               <button
-                onClick={() => setStep(1)}
-                className="rounded-full border border-slate-700 px-6 py-3 font-medium text-slate-300 transition-colors hover:border-slate-500 hover:text-white cursor-pointer"
+                onClick={() => setStep(2)}
+                className="rounded-full border border-stone-300 px-6 py-3 font-medium text-stone-700 transition-colors hover:border-stone-400 hover:text-stone-900 cursor-pointer"
               >
                 ← Atrás
               </button>
@@ -168,8 +394,8 @@ export default function OnboardingPage() {
                   rounded-full px-8 py-3 text-lg font-semibold transition-all duration-200
                   ${
                     canFinish
-                      ? "bg-gradient-to-r from-blue-500 to-violet-500 text-white hover:from-blue-600 hover:to-violet-600 shadow-lg shadow-blue-500/25 cursor-pointer"
-                      : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      ? "bg-stone-900 text-white hover:opacity-90 shadow-md shadow-stone-300/50 cursor-pointer"
+                      : "bg-stone-200 text-stone-400 cursor-not-allowed"
                   }
                 `}
               >
@@ -180,5 +406,19 @@ export default function OnboardingPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-stone-100">
+          <div className="text-stone-500">Cargando...</div>
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
   );
 }

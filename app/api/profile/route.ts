@@ -24,7 +24,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("nombre, empresa, rol, sector")
+      .select("nombre, empresa, rol, sector, edad, ciudad, nivel_conocimiento, objetivo_podcast, horario_escucha, survey_completed")
       .eq("id", user.id)
       .single();
 
@@ -57,17 +57,40 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { nombre, empresa, rol, sector } = body;
+    const {
+      nombre,
+      empresa,
+      rol,
+      sector,
+      edad,
+      ciudad,
+      nivel_conocimiento,
+      objetivo_podcast,
+      horario_escucha,
+      survey_completed,
+    } = body;
+
+    const updateData: Record<string, unknown> = {
+      nombre,
+      empresa,
+      rol,
+      sector,
+      edad,
+      ciudad,
+      nivel_conocimiento,
+      objetivo_podcast,
+      horario_escucha,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Solo incluir survey_completed si viene explícitamente en el body
+    if (survey_completed !== undefined) {
+      updateData.survey_completed = survey_completed;
+    }
 
     const { data, error } = await supabase
       .from("profiles")
-      .update({
-        nombre,
-        empresa,
-        rol,
-        sector,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", user.id)
       .select()
       .single();

@@ -14,20 +14,40 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Comprobar si el usuario ya tiene preferencias
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (user) {
-        const { data: preferences } = await supabase
-          .from("preferences")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
+        // Comprobar en paralelo si tiene survey y preferences
+        const [profileResult, preferencesResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("survey_completed")
+            .eq("id", user.id)
+            .single(),
+          supabase
+            .from("preferences")
+            .select("id")
+            .eq("user_id", user.id)
+            .single(),
+        ]);
 
-        // Si ya tiene preferencias, ir al dashboard; si no, al onboarding
-        const redirectTo = preferences ? "/dashboard" : next;
+        const hasSurvey = profileResult.data?.survey_completed === true;
+        const hasPreferences = !!preferencesResult.data;
+
+        let redirectTo: string;
+        if (hasPreferences) {
+          // Tiene todo completo → dashboard
+          redirectTo = "/dashboard";
+        } else if (hasSurvey) {
+          // Tiene encuesta pero no preferences → saltar al paso 2
+          redirectTo = "/onboarding?step=2";
+        } else {
+          // No tiene nada → onboarding desde el inicio
+          redirectTo = next;
+        }
+
         return NextResponse.redirect(`${origin}${redirectTo}`);
       }
     }

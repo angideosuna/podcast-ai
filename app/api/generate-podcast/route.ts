@@ -46,16 +46,9 @@ export async function POST(request: Request) {
     // Paso 1: Buscar noticias reales del día
     const articles = await fetchNews(topics);
 
-    // Paso 2: Generar el guion con Claude
-    const script = await generateScript(articles, duration, tone, adjustments);
-
-    const selectedArticles = articles.slice(
-      0,
-      duration === 5 ? 3 : duration === 15 ? 5 : 8
-    );
-
-    // Paso 3: Guardar episodio en Supabase (si el usuario está autenticado)
-    let episodeId: string | null = null;
+    // Paso 2: Obtener perfil del usuario si está autenticado
+    let profile: Record<string, string | null> | null = null;
+    let userId: string | null = null;
     try {
       const supabase = await createClient();
       const {
@@ -63,10 +56,38 @@ export async function POST(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user) {
+        userId = user.id;
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("nombre, rol, sector, edad, ciudad, nivel_conocimiento, objetivo_podcast, horario_escucha")
+          .eq("id", user.id)
+          .single();
+
+        if (profileData) {
+          profile = profileData as Record<string, string | null>;
+        }
+      }
+    } catch {
+      // Silencioso: el perfil es opcional para la generación
+    }
+
+    // Paso 3: Generar el guion con Claude
+    const script = await generateScript(articles, duration, tone, adjustments, profile);
+
+    const selectedArticles = articles.slice(
+      0,
+      duration === 5 ? 3 : duration === 15 ? 5 : 8
+    );
+
+    // Paso 4: Guardar episodio en Supabase (si el usuario está autenticado)
+    let episodeId: string | null = null;
+    if (userId) {
+      try {
+        const supabase = await createClient();
         const { data: episode } = await supabase
           .from("episodes")
           .insert({
-            user_id: user.id,
+            user_id: userId,
             title: `Podcast del ${new Date().toLocaleDateString("es-ES")}`,
             script,
             duration,
@@ -79,10 +100,10 @@ export async function POST(request: Request) {
           .single();
 
         episodeId = episode?.id || null;
+      } catch (saveError) {
+        // No bloquear si falla el guardado (el podcast ya se generó)
+        log.warn("No se pudo guardar el episodio en Supabase", saveError);
       }
-    } catch (saveError) {
-      // No bloquear si falla el guardado (el podcast ya se generó)
-      log.warn("No se pudo guardar el episodio en Supabase", saveError);
     }
 
     return NextResponse.json({
