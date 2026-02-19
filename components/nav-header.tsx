@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { logout } from "@/lib/auth-utils";
 import {
   LayoutDashboard,
   History,
@@ -26,9 +26,7 @@ export function NavHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    localStorage.removeItem("podcast-ai-preferences");
+    await logout();
     router.push("/login");
     router.refresh();
   };

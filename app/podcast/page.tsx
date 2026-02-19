@@ -3,24 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { TOPICS } from "@/lib/topics";
-import { AudioPlayer } from "@/components/audio-player";
+import { renderMarkdown } from "@/lib/markdown";
+import { BrowserAudioPlayer } from "@/components/browser-audio-player";
 import { AdjustEpisode } from "@/components/adjust-episode";
-
-interface Article {
-  title: string;
-  description: string;
-  source: string;
-  url: string;
-  publishedAt: string;
-}
-
-interface Preferences {
-  topics: string[];
-  duration: number;
-  tone: string;
-}
-
-type LoadingPhase = "news" | "script" | "done" | "error";
+import type { Article, Preferences, LoadingPhase } from "@/lib/types";
 
 const LOADING_MESSAGES: Record<string, { emoji: string; text: string }> = {
   news: { emoji: "📡", text: "Buscando noticias del día..." },
@@ -40,59 +26,9 @@ export default function PodcastPage() {
   // Ref para ajustes (evita recrear generatePodcast)
   const adjustmentsRef = useRef<string | null>(null);
 
-  // Estado del audio y episodio
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [audioLoading, setAudioLoading] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
-  const [episodeId, setEpisodeId] = useState<string | null>(null);
-
-  // Generar audio a partir del guion
-  const generateAudioFromScript = useCallback(
-    async (scriptText: string) => {
-      setAudioLoading(true);
-      setAudioError(null);
-
-      // Liberar URL anterior si existe
-      setAudioUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-
-      try {
-        const response = await fetch("/api/generate-audio", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ script: scriptText, episodeId }),
-        });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(
-          (data as { error?: string }).error ||
-            "Error al generar el audio"
-        );
-      }
-
-      const audioBlob = await response.blob();
-      const url = URL.createObjectURL(audioBlob);
-      setAudioUrl(url);
-    } catch (err) {
-      setAudioError(
-        err instanceof Error ? err.message : "No se pudo generar el audio"
-      );
-    } finally {
-      setAudioLoading(false);
-    }
-  }, [episodeId]);
-
   const generatePodcast = useCallback(async (prefs: Preferences) => {
     try {
       setPhase("news");
-      setAudioUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-      setAudioError(null);
 
       // Pequeña pausa para que el usuario vea el estado
       await new Promise((r) => setTimeout(r, 800));
@@ -117,7 +53,6 @@ export default function PodcastPage() {
 
       setScript(data.script);
       setArticles(data.articles);
-      if (data.episodeId) setEpisodeId(data.episodeId);
       setPhase("done");
 
       return data.script as string;
@@ -158,46 +93,12 @@ export default function PodcastPage() {
         router.push("/onboarding");
         return;
       }
+      // Si no tiene voz configurada, usar femenina por defecto
+      if (!prefs.voice) prefs.voice = "female";
       setPreferences(prefs);
-
-      // Generar guion y luego audio en paralelo
-      generatePodcast(prefs).then((generatedScript) => {
-        if (generatedScript) {
-          generateAudioFromScript(generatedScript);
-        }
-      });
+      generatePodcast(prefs);
     });
-  }, [router, generatePodcast, generateAudioFromScript]);
-
-  // Limpiar URL del audio al desmontar
-  useEffect(() => {
-    return () => {
-      setAudioUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-    };
-  }, []);
-
-  // Convertir markdown básico a HTML para renderizar el guion
-  function renderMarkdown(md: string): string {
-    return md
-      // Headers
-      .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-slate-200 mt-6 mb-2">$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold text-white mt-8 mb-3">$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-white mt-6 mb-4">$1</h1>')
-      // Bold
-      .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-      // Italic
-      .replace(/\*(.+?)\*/g, '<em class="text-slate-300">$1</em>')
-      // Horizontal rules
-      .replace(/^---$/gm, '<hr class="border-slate-800 my-6" />')
-      // Line breaks
-      .replace(/\n\n/g, '</p><p class="text-slate-300 leading-relaxed mb-4">')
-      // Wrap in paragraph
-      .replace(/^(?!<)/, '<p class="text-slate-300 leading-relaxed mb-4">')
-      .concat("</p>");
-  }
+  }, [router, generatePodcast]);
 
   // Pantalla de carga
   if (phase === "news" || phase === "script") {
@@ -279,6 +180,9 @@ export default function PodcastPage() {
               <span className="rounded-full bg-slate-800 px-3 py-1">
                 🎯 {preferences.tone}
               </span>
+              <span className="rounded-full bg-slate-800 px-3 py-1">
+                {preferences.voice === "male" ? "👨" : "👩"} {preferences.voice === "male" ? "Voz masculina" : "Voz femenina"}
+              </span>
               {preferences.topics.map((id) => {
                 const topic = TOPICS.find((t) => t.id === id);
                 return (
@@ -336,9 +240,7 @@ export default function PodcastPage() {
             onClick={() => {
               if (preferences) {
                 adjustmentsRef.current = null;
-                generatePodcast(preferences).then((s) => {
-                  if (s) generateAudioFromScript(s);
-                });
+                generatePodcast(preferences);
               }
             }}
             className="cursor-pointer rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-6 py-3 font-medium text-white transition-opacity hover:opacity-90"
@@ -349,8 +251,7 @@ export default function PodcastPage() {
             onAdjust={async (adjustments) => {
               if (!preferences) return;
               adjustmentsRef.current = adjustments;
-              const s = await generatePodcast(preferences);
-              if (s) generateAudioFromScript(s);
+              await generatePodcast(preferences);
               adjustmentsRef.current = null;
             }}
           />
@@ -363,13 +264,13 @@ export default function PodcastPage() {
         </div>
       </div>
 
-      {/* Audio Player (sticky en la parte inferior) */}
-      <AudioPlayer
-        audioUrl={audioUrl}
-        isLoading={audioLoading}
-        error={audioError}
-        onRetry={() => script && generateAudioFromScript(script)}
-      />
+      {/* Reproductor de voz del navegador */}
+      {script && preferences && (
+        <BrowserAudioPlayer
+          script={script}
+          voice={preferences.voice}
+        />
+      )}
     </div>
   );
 }

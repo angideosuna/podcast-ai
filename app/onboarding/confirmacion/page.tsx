@@ -3,32 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TOPICS } from "@/lib/topics";
+import type { Preferences } from "@/lib/types";
+import { TONE_LABELS, VOICE_LABELS } from "@/lib/types";
 
-interface Preferences {
-  topics: string[];
-  duration: number;
-  tone: string;
-  createdAt: string;
+function loadPreferencesFromStorage(): Preferences | null {
+  if (typeof window === "undefined") return null;
+  const saved = localStorage.getItem("podcast-ai-preferences");
+  if (!saved) return null;
+  return JSON.parse(saved) as Preferences;
 }
-
-const TONE_LABELS: Record<string, string> = {
-  casual: "Casual",
-  profesional: "Profesional",
-  "deep-dive": "Deep-dive",
-};
 
 export default function ConfirmacionPage() {
   const router = useRouter();
-  const [preferences, setPreferences] = useState<Preferences | null>(null);
+  const [preferences] = useState<Preferences | null>(loadPreferencesFromStorage);
 
   useEffect(() => {
-    const saved = localStorage.getItem("podcast-ai-preferences");
-    if (!saved) {
+    if (!preferences) {
       router.push("/onboarding");
-      return;
     }
-    setPreferences(JSON.parse(saved));
-  }, [router]);
+  }, [preferences, router]);
 
   if (!preferences) {
     return (
@@ -84,6 +77,12 @@ export default function ConfirmacionPage() {
               <p className="text-sm font-medium text-slate-400">Tono</p>
               <p className="mt-1 text-lg text-white">
                 {TONE_LABELS[preferences.tone] || preferences.tone}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-400">Voz</p>
+              <p className="mt-1 text-lg text-white">
+                {VOICE_LABELS[preferences.voice] || preferences.voice}
               </p>
             </div>
           </div>

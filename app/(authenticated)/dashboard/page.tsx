@@ -6,25 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { TOPICS } from "@/lib/topics";
 import { Play, Headphones, Clock, Loader2 } from "lucide-react";
 import Link from "next/link";
-
-interface Episode {
-  id: string;
-  title: string;
-  topics: string[];
-  duration: number;
-  tone: string;
-  audio_url: string | null;
-  created_at: string;
-}
-
-interface Profile {
-  nombre: string | null;
-}
+import type { EpisodeSummary } from "@/lib/types";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [profile, setProfile] = useState<{ nombre: string | null } | null>(null);
+  const [episodes, setEpisodes] = useState<EpisodeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasPreferences, setHasPreferences] = useState(false);
 

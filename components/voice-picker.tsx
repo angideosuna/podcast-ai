@@ -1,0 +1,47 @@
+"use client";
+
+interface VoiceOption {
+  value: string;
+  label: string;
+  descripcion: string;
+  emoji: string;
+}
+
+const VOCES: VoiceOption[] = [
+  { value: "female", label: "Voz femenina", descripcion: "Narración con voz de mujer", emoji: "👩" },
+  { value: "male", label: "Voz masculina", descripcion: "Narración con voz de hombre", emoji: "👨" },
+];
+
+interface VoicePickerProps {
+  selected: string | null;
+  onSelect: (voice: string) => void;
+}
+
+export function VoicePicker({ selected, onSelect }: VoicePickerProps) {
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-white">Voz del narrador</h3>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {VOCES.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => onSelect(option.value)}
+            className={`
+              flex flex-col items-center gap-2 rounded-xl border-2 p-5
+              transition-all duration-200 cursor-pointer
+              ${
+                selected === option.value
+                  ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20"
+                  : "border-slate-700 bg-slate-800/50 hover:border-slate-500 hover:bg-slate-800"
+              }
+            `}
+          >
+            <span className="text-2xl">{option.emoji}</span>
+            <span className="text-lg font-semibold text-white">{option.label}</span>
+            <span className="text-xs text-slate-400">{option.descripcion}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

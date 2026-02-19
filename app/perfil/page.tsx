@@ -2,16 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { logout } from "@/lib/auth-utils";
 import { LogOut, Save, Loader2 } from "lucide-react";
-
-interface Profile {
-  nombre: string;
-  empresa: string;
-  rol: string;
-  sector: string;
-  email: string;
-}
+import type { Profile } from "@/lib/types";
 
 export default function PerfilPage() {
   const router = useRouter();
@@ -77,9 +70,7 @@ export default function PerfilPage() {
   };
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    localStorage.removeItem("podcast-ai-preferences");
+    await logout();
     router.push("/login");
     router.refresh();
   };
