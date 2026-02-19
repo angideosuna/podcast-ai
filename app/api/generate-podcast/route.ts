@@ -5,6 +5,9 @@ import { NextResponse } from "next/server";
 import { fetchNews } from "@/lib/newsapi";
 import { generateScript } from "@/lib/generate-script";
 import { createClient } from "@/lib/supabase/server";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("api/generate-podcast");
 
 interface GenerateRequest {
   topics: string[];
@@ -77,9 +80,9 @@ export async function POST(request: Request) {
 
         episodeId = episode?.id || null;
       }
-    } catch {
+    } catch (saveError) {
       // No bloquear si falla el guardado (el podcast ya se generó)
-      console.warn("No se pudo guardar el episodio en Supabase");
+      log.warn("No se pudo guardar el episodio en Supabase", saveError);
     }
 
     return NextResponse.json({
@@ -89,7 +92,7 @@ export async function POST(request: Request) {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error generando podcast:", error);
+    log.error("Error generando podcast", error);
 
     const message =
       error instanceof Error ? error.message : "Error desconocido";

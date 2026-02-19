@@ -4,18 +4,22 @@
 import { NextResponse } from "next/server";
 import { generateAudio } from "@/lib/elevenlabs";
 import { createClient } from "@/lib/supabase/server";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("api/generate-audio");
 
 export const maxDuration = 60; // Permite hasta 60s en Vercel
 
 interface GenerateAudioRequest {
   script: string;
   episodeId?: string;
+  voice?: string;
 }
 
 export async function POST(request: Request) {
   try {
     const body: GenerateAudioRequest = await request.json();
-    const { script, episodeId } = body;
+    const { script, episodeId, voice } = body;
 
     if (!script || script.trim().length === 0) {
       return NextResponse.json(
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const audioBuffer = await generateAudio(script);
+    const audioBuffer = await generateAudio(script, voice);
 
     // Subir a Supabase Storage si el usuario está autenticado y hay episodeId
     if (episodeId) {
@@ -66,9 +70,9 @@ export async function POST(request: Request) {
               .eq("user_id", user.id);
           }
         }
-      } catch {
+      } catch (uploadErr) {
         // No bloquear: el audio ya se generó, se devuelve igualmente
-        console.warn("No se pudo subir el audio a Supabase Storage");
+        log.warn("No se pudo subir el audio a Supabase Storage", uploadErr);
       }
     }
 
@@ -79,7 +83,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error generando audio:", error);
+    log.error("Error generando audio", error);
 
     const message =
       error instanceof Error ? error.message : "Error desconocido";

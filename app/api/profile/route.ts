@@ -4,6 +4,9 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("api/profile");
 
 export async function GET() {
   try {
@@ -31,7 +34,7 @@ export async function GET() {
       profile: { ...data, email: user.email },
     });
   } catch (error) {
-    console.error("Error obteniendo perfil:", error);
+    log.error("Error obteniendo perfil", error);
     return NextResponse.json(
       { error: "Error al obtener perfil" },
       { status: 500 }
@@ -73,7 +76,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ profile: data });
   } catch (error) {
-    console.error("Error actualizando perfil:", error);
+    log.error("Error actualizando perfil", error);
     return NextResponse.json(
       { error: "Error al actualizar perfil" },
       { status: 500 }

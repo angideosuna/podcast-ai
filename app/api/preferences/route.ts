@@ -4,6 +4,9 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("api/preferences");
 
 export async function GET() {
   try {
@@ -32,7 +35,7 @@ export async function GET() {
 
     return NextResponse.json({ preferences: data || null });
   } catch (error) {
-    console.error("Error obteniendo preferencias:", error);
+    log.error("Error obteniendo preferencias", error);
     return NextResponse.json(
       { error: "Error al obtener preferencias" },
       { status: 500 }
@@ -84,7 +87,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ preferences: data });
   } catch (error) {
-    console.error("Error guardando preferencias:", error);
+    log.error("Error guardando preferencias", error);
     return NextResponse.json(
       { error: "Error al guardar preferencias" },
       { status: 500 }
