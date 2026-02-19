@@ -7,7 +7,7 @@ import { createLogger } from "@/lib/logger";
 const log = createLogger("generate-script");
 
 // Número de noticias según duración del podcast
-const ARTICLES_BY_DURATION: Record<number, number> = {
+export const ARTICLES_BY_DURATION: Record<number, number> = {
   5: 3,
   15: 5,
   30: 8,
@@ -242,11 +242,12 @@ export async function generateScript(
   const totalNewsSeconds = duration * 60 - introSeconds - closingSeconds;
   const secondsPerArticle = Math.floor(totalNewsSeconds / selectedArticles.length);
 
-  // Formatear las noticias para el prompt
+  // Formatear las noticias para el prompt (sanitizar newlines)
+  const sanitize = (s: string) => s.replace(/[\n\r]+/g, " ").trim();
   const newsContext = selectedArticles
     .map(
       (a, i) =>
-        `NOTICIA ${i + 1}:\n- Titular: ${a.title}\n- Descripción: ${a.description}\n- Fuente: ${a.source}\n- URL: ${a.url}\n- Fecha: ${a.publishedAt}`
+        `NOTICIA ${i + 1}:\n- Titular: ${sanitize(a.title)}\n- Descripción: ${sanitize(a.description)}\n- Fuente: ${a.source}\n- URL: ${a.url}\n- Fecha: ${a.publishedAt}`
     )
     .join("\n\n");
 

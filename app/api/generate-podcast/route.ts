@@ -3,9 +3,11 @@
 
 import { NextResponse } from "next/server";
 import { fetchNews } from "@/lib/newsapi";
-import { generateScript } from "@/lib/generate-script";
+import { fetchFromAgent } from "@/src/agents/news-agent/storage/get-articles";
+import { generateScript, ARTICLES_BY_DURATION } from "@/lib/generate-script";
 import { createClient } from "@/lib/supabase/server";
 import { createLogger } from "@/lib/logger";
+import { TOPICS } from "@/lib/topics";
 
 const log = createLogger("api/generate-podcast");
 
@@ -29,13 +31,40 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validar que las API keys estan configuradas
-    if (!process.env.GNEWS_API_KEY) {
+    // Validar tipos y valores
+    const validTopicIds = new Set(TOPICS.map((t) => t.id));
+    if (
+      !Array.isArray(topics) ||
+      !topics.every((t) => typeof t === "string" && validTopicIds.has(t))
+    ) {
       return NextResponse.json(
-        { error: "GNEWS_API_KEY no esta configurada en el servidor" },
-        { status: 500 }
+        { error: "topics debe ser un array de IDs de temas válidos" },
+        { status: 400 }
       );
     }
+
+    if (![5, 15, 30].includes(duration)) {
+      return NextResponse.json(
+        { error: "duration debe ser 5, 15 o 30" },
+        { status: 400 }
+      );
+    }
+
+    if (!["casual", "profesional", "deep-dive"].includes(tone)) {
+      return NextResponse.json(
+        { error: "tone debe ser 'casual', 'profesional' o 'deep-dive'" },
+        { status: 400 }
+      );
+    }
+
+    if (adjustments !== undefined && (typeof adjustments !== "string" || adjustments.length > 500)) {
+      return NextResponse.json(
+        { error: "adjustments debe ser un string de máximo 500 caracteres" },
+        { status: 400 }
+      );
+    }
+
+    // Validar que las API keys estan configuradas
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
         { error: "ANTHROPIC_API_KEY no está configurada en el servidor" },
@@ -43,14 +72,36 @@ export async function POST(request: Request) {
       );
     }
 
-    // Paso 1: Buscar noticias reales del día
-    const articles = await fetchNews(topics);
+    // Paso 1: Buscar noticias — primero del News Agent, fallback a GNews
+    const minArticles = ARTICLES_BY_DURATION[duration] || 5;
+    let articles = await fetchFromAgent(topics, minArticles + 2);
+    let source: "agent" | "gnews" = "agent";
+
+    if (articles.length < minArticles) {
+      log.info(
+        `Agent devolvió ${articles.length} artículos (mínimo ${minArticles}), intentando fallback a GNews`
+      );
+      try {
+        articles = await fetchNews(topics);
+        source = "gnews";
+      } catch (gnewsError) {
+        // Si GNews también falla y el agente devolvió algo, usar lo que haya
+        if (articles.length > 0) {
+          log.warn("GNews falló, usando artículos parciales del agente", gnewsError);
+          source = "agent";
+        } else {
+          throw gnewsError;
+        }
+      }
+    }
+
+    log.info(`Usando ${articles.length} artículos de ${source}`);
 
     // Paso 2: Obtener perfil del usuario si está autenticado
     let profile: Record<string, string | null> | null = null;
     let userId: string | null = null;
+    const supabase = await createClient();
     try {
-      const supabase = await createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -67,23 +118,19 @@ export async function POST(request: Request) {
           profile = profileData as Record<string, string | null>;
         }
       }
-    } catch {
-      // Silencioso: el perfil es opcional para la generación
+    } catch (profileError) {
+      log.warn("No se pudo cargar el perfil del usuario", profileError);
     }
 
     // Paso 3: Generar el guion con Claude
     const script = await generateScript(articles, duration, tone, adjustments, profile);
 
-    const selectedArticles = articles.slice(
-      0,
-      duration === 5 ? 3 : duration === 15 ? 5 : 8
-    );
+    const selectedArticles = articles.slice(0, minArticles);
 
     // Paso 4: Guardar episodio en Supabase (si el usuario está autenticado)
     let episodeId: string | null = null;
     if (userId) {
       try {
-        const supabase = await createClient();
         const { data: episode } = await supabase
           .from("episodes")
           .insert({

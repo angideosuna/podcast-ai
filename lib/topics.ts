@@ -60,3 +60,9 @@ export const TOPICS: Topic[] = [
 
 export const MIN_TOPICS = 3;
 export const MAX_TOPICS = 5;
+
+export const TOPICS_MAP = new Map(TOPICS.map((t) => [t.id, t]));
+
+export function getTopicById(id: string): Topic | undefined {
+  return TOPICS_MAP.get(id);
+}

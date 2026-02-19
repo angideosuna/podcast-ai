@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { TOPICS } from "@/lib/topics";
+import { getTopicById } from "@/lib/topics";
 import { renderMarkdown } from "@/lib/markdown";
 import { AudioPlayer } from "@/components/audio-player";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -88,8 +88,8 @@ export default function EpisodeDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100vh-60px)] items-center justify-center bg-slate-950">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+      <div className="flex min-h-[calc(100vh-60px)] items-center justify-center bg-stone-100">
+        <Loader2 className="h-8 w-8 animate-spin text-stone-900" />
       </div>
     );
   }
@@ -97,12 +97,12 @@ export default function EpisodeDetailPage() {
   if (!episode) return null;
 
   return (
-    <div className="min-h-[calc(100vh-60px)] bg-slate-950 px-4 pb-24 pt-8 text-white">
+    <div className="min-h-[calc(100vh-60px)] bg-stone-100 px-4 pb-24 pt-8 text-stone-900">
       <div className="mx-auto max-w-3xl">
         {/* Volver */}
         <Link
           href="/historial"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-stone-500 transition-colors hover:text-stone-900"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver al historial
@@ -111,7 +111,7 @@ export default function EpisodeDetailPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold">{episode.title}</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-stone-400">
             {new Date(episode.created_at).toLocaleDateString("es-ES", {
               weekday: "long",
               day: "numeric",
@@ -122,11 +122,11 @@ export default function EpisodeDetailPage() {
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {episode.topics.map((topicId) => {
-              const topic = TOPICS.find((t) => t.id === topicId);
+              const topic = getTopicById(topicId);
               return (
                 <span
                   key={topicId}
-                  className="rounded-full bg-blue-500/15 px-3 py-1 text-sm text-blue-400"
+                  className="rounded-full bg-stone-800/8 px-3 py-1 text-sm text-stone-900"
                 >
                   {topic ? `${topic.emoji} ${topic.nombre}` : topicId}
                 </span>
@@ -137,13 +137,13 @@ export default function EpisodeDetailPage() {
 
         {/* Boton de generar audio si no existe */}
         {!audioUrl && !audioLoading && !audioError && (
-          <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-center">
-            <p className="mb-3 text-sm text-slate-400">
+          <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-4 text-center">
+            <p className="mb-3 text-sm text-stone-500">
               Este episodio no tiene audio generado
             </p>
             <button
               onClick={generateAudio}
-              className="cursor-pointer rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              className="cursor-pointer rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
             >
               🔊 Generar audio
             </button>
@@ -151,24 +151,24 @@ export default function EpisodeDetailPage() {
         )}
 
         {/* Guion */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8">
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8">
           <div
-            className="prose-invert max-w-none"
+            className="prose prose-stone max-w-none"
             dangerouslySetInnerHTML={{ __html: renderMarkdown(episode.script) }}
           />
         </div>
 
         {/* Fuentes */}
         {episode.articles && episode.articles.length > 0 && (
-          <div className="mt-8 rounded-xl border border-slate-800 bg-slate-900/50 p-6">
-            <h2 className="mb-4 text-lg font-semibold text-slate-200">
+          <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-6">
+            <h2 className="mb-4 text-lg font-semibold text-stone-800">
               📰 Fuentes utilizadas
             </h2>
             <ul className="space-y-3">
               {episode.articles.map((article, i) => (
                 <li
                   key={i}
-                  className="border-b border-slate-800 pb-3 last:border-0 last:pb-0"
+                  className="border-b border-stone-200 pb-3 last:border-0 last:pb-0"
                 >
                   <a
                     href={article.url}
@@ -176,10 +176,10 @@ export default function EpisodeDetailPage() {
                     rel="noopener noreferrer"
                     className="group block"
                   >
-                    <p className="font-medium text-blue-400 transition-colors group-hover:text-blue-300">
+                    <p className="font-medium text-stone-900 underline transition-colors group-hover:text-stone-700">
                       {article.title}
                     </p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-stone-400">
                       {article.source} ·{" "}
                       {new Date(article.publishedAt).toLocaleDateString(
                         "es-ES"

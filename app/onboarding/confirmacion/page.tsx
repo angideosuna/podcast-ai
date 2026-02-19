@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { TOPICS } from "@/lib/topics";
+import { getTopicById } from "@/lib/topics";
 import type { Preferences, Profile } from "@/lib/types";
 import {
   TONE_LABELS,
@@ -15,7 +15,11 @@ function loadPreferencesFromStorage(): Preferences | null {
   if (typeof window === "undefined") return null;
   const saved = localStorage.getItem("podcast-ai-preferences");
   if (!saved) return null;
-  return JSON.parse(saved) as Preferences;
+  try {
+    return JSON.parse(saved) as Preferences;
+  } catch {
+    return null;
+  }
 }
 
 export default function ConfirmacionPage() {
@@ -55,7 +59,7 @@ export default function ConfirmacionPage() {
 
   // Obtener los nombres de los temas seleccionados
   const selectedTopicNames = preferences.topics.map((id) => {
-    const topic = TOPICS.find((t) => t.id === id);
+    const topic = getTopicById(id);
     return topic ? `${topic.emoji} ${topic.nombre}` : id;
   });
 

@@ -21,11 +21,8 @@ export function cleanScriptForTTS(script: string): string {
       .replace(/\*(.+?)\*/g, "$1")
       // Eliminar enlaces markdown [texto](url) → texto
       .replace(/\[(.+?)\]\(.+?\)/g, "$1")
-      // Eliminar emojis comunes de los títulos
-      .replace(
-        /[\u{1F3A7}\u{1F399}\u{1F4F0}\u{1F4E1}\u{2705}\u{274C}\u{1F525}\u{1F680}\u{1F4A1}\u{1F4CA}\u{1F3DB}\u{1F3E5}\u{1F3AD}\u{1F4BB}\u{1F916}\u{1F52C}\u{1F4C8}]/gu,
-        ""
-      )
+      // Eliminar todos los emojis usando categorías Unicode
+      .replace(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu, "")
       // Colapsar múltiples líneas vacías en una sola pausa
       .replace(/\n{3,}/g, "\n\n")
       // Limpiar espacios extra
