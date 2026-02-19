@@ -24,7 +24,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("preferences")
-      .select("topics, duration, tone")
+      .select("topics, duration, tone, voice")
       .eq("user_id", user.id)
       .single();
 
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { topics, duration, tone } = body;
+    const { topics, duration, tone, voice } = body;
 
     if (!topics?.length || !duration || !tone) {
       return NextResponse.json(
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
           topics,
           duration,
           tone,
+          voice: voice || "female",
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
