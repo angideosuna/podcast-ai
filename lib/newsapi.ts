@@ -7,16 +7,49 @@ export type { Article };
 
 const log = createLogger("newsapi");
 
-// Mapeo de topic IDs del onboarding a terminos de busqueda
+// Mapeo de subtopic IDs del onboarding a terminos de busqueda
 const TOPIC_SEARCH_TERMS: Record<string, string> = {
-  tecnologia: "tecnologia OR technology",
-  "inteligencia-artificial": "inteligencia artificial OR AI",
-  ciencia: "ciencia OR science",
-  politica: "politica OR politics",
-  economia: "economia OR finanzas",
-  startups: "startups OR emprendimiento",
-  salud: "salud OR medicina",
-  cultura: "cultura OR entretenimiento",
+  // Tecnología
+  ia: "inteligencia artificial OR AI OR machine learning",
+  ciberseguridad: "ciberseguridad OR cybersecurity OR hacking",
+  startups: "startups OR emprendimiento OR venture capital",
+  gadgets: "gadgets OR dispositivos OR tecnologia",
+  programacion: "programacion OR software OR desarrollo",
+  // Ciencia
+  espacio: "espacio OR NASA OR astronomia",
+  "naturaleza-medioambiente": "medioambiente OR cambio climatico OR ecologia",
+  neurociencia: "neurociencia OR cerebro OR neurologia",
+  medicina: "medicina OR salud OR investigacion medica",
+  // Negocios y Finanzas
+  emprendimiento: "emprendimiento OR negocio OR entrepreneurship",
+  marketing: "marketing OR publicidad OR branding",
+  inversiones: "inversiones OR bolsa OR finanzas",
+  economia: "economia OR mercados OR macroeconomia",
+  // Entretenimiento
+  "cine-series": "cine OR series OR peliculas OR streaming",
+  videojuegos: "videojuegos OR gaming OR esports",
+  musica: "musica OR conciertos OR artistas",
+  comedia: "comedia OR humor OR stand-up",
+  // Salud y Bienestar
+  fitness: "fitness OR ejercicio OR deporte",
+  nutricion: "nutricion OR dieta OR alimentacion",
+  "salud-mental": "salud mental OR psicologia OR bienestar",
+  "desarrollo-personal": "desarrollo personal OR productividad OR autoayuda",
+  // Sociedad y Cultura
+  "politica-actualidad": "politica OR actualidad OR gobierno",
+  historia: "historia OR historico OR arqueologia",
+  filosofia: "filosofia OR pensamiento OR etica",
+  educacion: "educacion OR universidad OR aprendizaje",
+  // True Crime y Misterio
+  "casos-reales": "true crime OR casos reales OR crimen",
+  paranormal: "paranormal OR misterio OR sobrenatural",
+  conspiraciones: "conspiraciones OR teorias OR misterios",
+  criminologia: "criminologia OR forense OR investigacion criminal",
+  // Lifestyle
+  viajes: "viajes OR turismo OR destinos",
+  gastronomia: "gastronomia OR cocina OR restaurantes",
+  deportes: "deportes OR futbol OR competicion",
+  "relaciones-familia": "relaciones OR familia OR pareja",
 };
 
 export async function fetchNews(
@@ -31,9 +64,13 @@ export async function fetchNews(
   log.info(`Buscando noticias para topics: ${topics.join(", ")}`);
 
   // Combinar los terminos de busqueda de todos los topics seleccionados
-  const searchTerms = topics
-    .map((topic) => TOPIC_SEARCH_TERMS[topic])
-    .filter(Boolean);
+  const searchTerms = topics.map((topic) => {
+    // Soporte para topics custom: usar el label como query directa
+    if (topic.startsWith("custom:")) {
+      return topic.slice(7);
+    }
+    return TOPIC_SEARCH_TERMS[topic];
+  }).filter(Boolean);
 
   if (searchTerms.length === 0) {
     throw new Error("No se encontraron terminos de busqueda para los topics seleccionados");

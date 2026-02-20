@@ -2,8 +2,9 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { TOPICS, MIN_TOPICS, MAX_TOPICS } from "@/lib/topics";
-import { TopicCard } from "@/components/topic-card";
+import { CATEGORIES, getSubtopicsByCategory } from "@/lib/topics";
+import { CategoryCard } from "@/components/category-card";
+import { OtrosSection } from "@/components/otros-section";
 import { DurationPicker } from "@/components/duration-picker";
 import { TonePicker } from "@/components/tone-picker";
 import { VoicePicker } from "@/components/voice-picker";
@@ -46,8 +47,10 @@ function OnboardingContent() {
   const [horarioEscucha, setHorarioEscucha] = useState<string | null>(null);
   const [surveyLoaded, setSurveyLoaded] = useState(false);
 
-  // Step 2 — Temas
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  // Step 2 — Temas (nuevo: categorías con subtemas)
+  const [selectedSubtopics, setSelectedSubtopics] = useState<string[]>([]);
+  const [customTopics, setCustomTopics] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
 
   // Step 3 — Configuración
   const [duration, setDuration] = useState<number | null>(null);
@@ -81,16 +84,49 @@ function OnboardingContent() {
     loadProfile();
   }, []);
 
-  // Alternar selección de tema
-  const toggleTopic = (topicId: string) => {
-    setSelectedTopics((prev) => {
-      if (prev.includes(topicId)) {
-        return prev.filter((id) => id !== topicId);
-      }
-      if (prev.length >= MAX_TOPICS) return prev;
-      return [...prev, topicId];
-    });
+  // --- Handlers Step 2 ---
+
+  const toggleSubtopic = (subtopicId: string) => {
+    setSelectedSubtopics((prev) =>
+      prev.includes(subtopicId)
+        ? prev.filter((id) => id !== subtopicId)
+        : [...prev, subtopicId]
+    );
   };
+
+  const toggleCategory = (categoryId: string) => {
+    const catSubtopicIds = getSubtopicsByCategory(categoryId);
+    const allSelected = catSubtopicIds.every((id) => selectedSubtopics.includes(id));
+
+    if (allSelected) {
+      // Deseleccionar todos
+      setSelectedSubtopics((prev) => prev.filter((id) => !catSubtopicIds.includes(id)));
+    } else {
+      // Seleccionar todos los que faltan
+      setSelectedSubtopics((prev) => [
+        ...prev,
+        ...catSubtopicIds.filter((id) => !prev.includes(id)),
+      ]);
+    }
+  };
+
+  const toggleExpanded = (categoryId: string) => {
+    setExpandedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const addCustomTopic = (label: string) => {
+    setCustomTopics((prev) => [...prev, label]);
+  };
+
+  const removeCustomTopic = (label: string) => {
+    setCustomTopics((prev) => prev.filter((t) => t !== label));
+  };
+
+  const totalSelected = selectedSubtopics.length + customTopics.length;
 
   // Validaciones
   const canGoToStep2 =
@@ -98,7 +134,7 @@ function OnboardingContent() {
     nivelConocimiento !== null &&
     objetivoPodcast !== null &&
     horarioEscucha !== null;
-  const canGoToStep3 = selectedTopics.length >= MIN_TOPICS;
+  const canGoToStep3 = totalSelected >= 1;
   const canFinish = duration !== null && tone !== null && voice !== null;
 
   // Guardar encuesta y avanzar a Step 2
@@ -127,8 +163,13 @@ function OnboardingContent() {
 
   // Guardar preferencias y finalizar
   const handleFinish = async () => {
+    const allTopics = [
+      ...selectedSubtopics,
+      ...customTopics.map((t) => `custom:${t}`),
+    ];
+
     const preferences = {
-      topics: selectedTopics,
+      topics: allTopics,
       duration,
       tone,
       voice,
@@ -141,7 +182,7 @@ function OnboardingContent() {
       await fetch("/api/preferences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topics: selectedTopics, duration, tone, voice }),
+        body: JSON.stringify({ topics: allTopics, duration, tone, voice }),
       });
     } catch {
       // Silencioso: localStorage sirve como fallback
@@ -304,11 +345,11 @@ function OnboardingContent() {
 
         {/* ========== PASO 2: Elegir temas ========== */}
         {step === 2 && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-3xl font-bold">Elige tus temas de interés</h2>
               <p className="mt-2 text-stone-500">
-                Selecciona entre {MIN_TOPICS} y {MAX_TOPICS} temas para personalizar tu podcast diario
+                Selecciona los subtemas que te interesen de cada categoría
               </p>
             </div>
 
@@ -316,28 +357,36 @@ function OnboardingContent() {
             <div className="flex justify-center">
               <span
                 className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-                  selectedTopics.length >= MIN_TOPICS
+                  totalSelected >= 1
                     ? "bg-stone-800/8 text-stone-900"
                     : "bg-stone-200 text-stone-500"
                 }`}
               >
-                {selectedTopics.length} de {MAX_TOPICS} seleccionados
-                {selectedTopics.length < MIN_TOPICS && ` (mínimo ${MIN_TOPICS})`}
+                {totalSelected} {totalSelected === 1 ? "tema seleccionado" : "temas seleccionados"}
               </span>
             </div>
 
-            {/* Grid de temas */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {TOPICS.map((topic) => (
-                <TopicCard
-                  key={topic.id}
-                  topic={topic}
-                  selected={selectedTopics.includes(topic.id)}
-                  disabled={selectedTopics.length >= MAX_TOPICS}
-                  onClick={() => toggleTopic(topic.id)}
+            {/* Lista de categorías */}
+            <div className="space-y-3">
+              {CATEGORIES.map((category) => (
+                <CategoryCard
+                  key={category.id}
+                  category={category}
+                  expanded={expandedCategories.includes(category.id)}
+                  selectedSubtopics={selectedSubtopics}
+                  onToggleExpand={() => toggleExpanded(category.id)}
+                  onToggleCategory={() => toggleCategory(category.id)}
+                  onToggleSubtopic={toggleSubtopic}
                 />
               ))}
             </div>
+
+            {/* Sección Otros */}
+            <OtrosSection
+              customTopics={customTopics}
+              onAdd={addCustomTopic}
+              onRemove={removeCustomTopic}
+            />
 
             {/* Botones de navegación */}
             <div className="flex items-center justify-center gap-4 pt-4">

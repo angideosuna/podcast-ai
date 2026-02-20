@@ -7,7 +7,8 @@ import { fetchFromAgent } from "@/src/agents/news-agent/storage/get-articles";
 import { generateScript, ARTICLES_BY_DURATION } from "@/lib/generate-script";
 import { createClient } from "@/lib/supabase/server";
 import { createLogger } from "@/lib/logger";
-import { TOPICS } from "@/lib/topics";
+import { ALL_SUBTOPIC_IDS } from "@/lib/topics";
+import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 
 const log = createLogger("api/generate-podcast");
 
@@ -19,6 +20,20 @@ interface GenerateRequest {
 }
 
 export async function POST(request: Request) {
+  // Rate limiting: 10 peticiones por IP cada 60 segundos
+  const ip = getClientIP(request);
+  const { allowed, remaining } = checkRateLimit(`generate-podcast:${ip}`, {
+    maxRequests: 10,
+    windowSeconds: 60,
+  });
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Espera un momento antes de reintentar." },
+      { status: 429, headers: { "Retry-After": "60", "X-RateLimit-Remaining": "0" } }
+    );
+  }
+
   try {
     const body: GenerateRequest = await request.json();
     const { topics, duration, tone, adjustments } = body;
@@ -32,11 +47,15 @@ export async function POST(request: Request) {
     }
 
     // Validar tipos y valores
-    const validTopicIds = new Set(TOPICS.map((t) => t.id));
-    if (
-      !Array.isArray(topics) ||
-      !topics.every((t) => typeof t === "string" && validTopicIds.has(t))
-    ) {
+    if (!Array.isArray(topics) || !topics.every((t) => {
+      if (typeof t !== "string") return false;
+      if (ALL_SUBTOPIC_IDS.has(t)) return true;
+      if (t.startsWith("custom:")) {
+        const label = t.slice(7).trim();
+        return label.length > 0 && label.length <= 50;
+      }
+      return false;
+    })) {
       return NextResponse.json(
         { error: "topics debe ser un array de IDs de temas válidos" },
         { status: 400 }
