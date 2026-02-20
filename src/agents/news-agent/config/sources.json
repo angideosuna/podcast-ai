@@ -1,0 +1,77 @@
+{
+  "rss": [
+    {
+      "id": "bbc-world",
+      "name": "BBC News World",
+      "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+      "language": "en",
+      "category": "general",
+      "enabled": true
+    },
+    {
+      "id": "bbc-tech",
+      "name": "BBC Technology",
+      "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+      "language": "en",
+      "category": "technology",
+      "enabled": true
+    },
+    {
+      "id": "bbc-science",
+      "name": "BBC Science",
+      "url": "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+      "language": "en",
+      "category": "science",
+      "enabled": true
+    },
+    {
+      "id": "guardian-world",
+      "name": "The Guardian World",
+      "url": "https://www.theguardian.com/world/rss",
+      "language": "en",
+      "category": "general",
+      "enabled": true
+    },
+    {
+      "id": "guardian-tech",
+      "name": "The Guardian Tech",
+      "url": "https://www.theguardian.com/technology/rss",
+      "language": "en",
+      "category": "technology",
+      "enabled": true
+    },
+    {
+      "id": "elpais-portada",
+      "name": "El País",
+      "url": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada",
+      "language": "es",
+      "category": "general",
+      "enabled": true
+    },
+    {
+      "id": "bbc-mundo",
+      "name": "BBC Mundo",
+      "url": "https://feeds.bbci.co.uk/mundo/rss.xml",
+      "language": "es",
+      "category": "general",
+      "enabled": true
+    },
+    {
+      "id": "xataka",
+      "name": "Xataka",
+      "url": "https://www.xataka.com/feedburner.xml",
+      "language": "es",
+      "category": "technology",
+      "enabled": true
+    }
+  ],
+  "apis": [
+    {
+      "id": "newsapi",
+      "name": "NewsAPI",
+      "type": "newsapi",
+      "enabled": true,
+      "categories": ["technology", "science", "business", "health", "entertainment", "sports"]
+    }
+  ]
+}

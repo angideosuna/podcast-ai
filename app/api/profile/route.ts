@@ -24,7 +24,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("nombre, empresa, rol, sector, edad, ciudad, nivel_conocimiento, objetivo_podcast, horario_escucha, survey_completed")
+      .select("nombre, empresa, rol, sector, edad, ciudad, nivel_conocimiento, objetivo_podcast, horario_escucha, periodicidad, dias_personalizados, survey_completed")
       .eq("id", user.id)
       .single();
 
@@ -67,6 +67,8 @@ export async function POST(request: Request) {
       nivel_conocimiento,
       objetivo_podcast,
       horario_escucha,
+      periodicidad,
+      dias_personalizados,
       survey_completed,
     } = body;
 
@@ -80,6 +82,8 @@ export async function POST(request: Request) {
       nivel_conocimiento,
       objetivo_podcast,
       horario_escucha,
+      periodicidad,
+      dias_personalizados,
       updated_at: new Date().toISOString(),
     };
 

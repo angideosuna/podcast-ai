@@ -2,13 +2,11 @@
 // POST /api/generate-podcast
 
 import { NextResponse } from "next/server";
-import { fetchNews } from "@/lib/newsapi";
-import { fetchFromAgent } from "@/src/agents/news-agent/storage/get-articles";
-import { generateScript, ARTICLES_BY_DURATION } from "@/lib/generate-script";
 import { createClient } from "@/lib/supabase/server";
 import { createLogger } from "@/lib/logger";
 import { ALL_SUBTOPIC_IDS } from "@/lib/topics";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
+import { generatePodcast } from "@/lib/generate-podcast";
 
 const log = createLogger("api/generate-podcast");
 
@@ -22,7 +20,7 @@ interface GenerateRequest {
 export async function POST(request: Request) {
   // Rate limiting: 10 peticiones por IP cada 60 segundos
   const ip = getClientIP(request);
-  const { allowed, remaining } = checkRateLimit(`generate-podcast:${ip}`, {
+  const { allowed, remaining } = await checkRateLimit(`generate-podcast:${ip}`, {
     maxRequests: 10,
     windowSeconds: 60,
   });
@@ -62,9 +60,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (![5, 15, 30].includes(duration)) {
+    if (![15, 30, 60].includes(duration)) {
       return NextResponse.json(
-        { error: "duration debe ser 5, 15 o 30" },
+        { error: "duration debe ser 15, 30 o 60" },
         { status: 400 }
       );
     }
@@ -91,92 +89,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // Paso 1: Buscar noticias — primero del News Agent, fallback a GNews
-    const minArticles = ARTICLES_BY_DURATION[duration] || 5;
-    let articles = await fetchFromAgent(topics, minArticles + 2);
-    let source: "agent" | "gnews" = "agent";
-
-    if (articles.length < minArticles) {
-      log.info(
-        `Agent devolvió ${articles.length} artículos (mínimo ${minArticles}), intentando fallback a GNews`
-      );
-      try {
-        articles = await fetchNews(topics);
-        source = "gnews";
-      } catch (gnewsError) {
-        // Si GNews también falla y el agente devolvió algo, usar lo que haya
-        if (articles.length > 0) {
-          log.warn("GNews falló, usando artículos parciales del agente", gnewsError);
-          source = "agent";
-        } else {
-          throw gnewsError;
-        }
-      }
-    }
-
-    log.info(`Usando ${articles.length} artículos de ${source}`);
-
-    // Paso 2: Obtener perfil del usuario si está autenticado
-    let profile: Record<string, string | null> | null = null;
-    let userId: string | null = null;
+    // Obtener usuario autenticado
     const supabase = await createClient();
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (user) {
-        userId = user.id;
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("nombre, rol, sector, edad, ciudad, nivel_conocimiento, objetivo_podcast, horario_escucha")
-          .eq("id", user.id)
-          .single();
-
-        if (profileData) {
-          profile = profileData as Record<string, string | null>;
-        }
-      }
-    } catch (profileError) {
-      log.warn("No se pudo cargar el perfil del usuario", profileError);
+    if (!user) {
+      return NextResponse.json(
+        { error: "No autenticado" },
+        { status: 401 }
+      );
     }
 
-    // Paso 3: Generar el guion con Claude
-    const script = await generateScript(articles, duration, tone, adjustments, profile);
+    const result = await generatePodcast({
+      topics,
+      duration,
+      tone,
+      adjustments,
+      userId: user.id,
+      supabase,
+    });
 
-    const selectedArticles = articles.slice(0, minArticles);
-
-    // Paso 4: Guardar episodio en Supabase (si el usuario está autenticado)
-    let episodeId: string | null = null;
-    if (userId) {
-      try {
-        const { data: episode } = await supabase
-          .from("episodes")
-          .insert({
-            user_id: userId,
-            title: `Podcast del ${new Date().toLocaleDateString("es-ES")}`,
-            script,
-            duration,
-            tone,
-            topics,
-            articles: selectedArticles,
-            adjustments: adjustments || null,
-          })
-          .select("id")
-          .single();
-
-        episodeId = episode?.id || null;
-      } catch (saveError) {
-        // No bloquear si falla el guardado (el podcast ya se generó)
-        log.warn("No se pudo guardar el episodio en Supabase", saveError);
-      }
-    }
-
-    return NextResponse.json({
-      script,
-      articles: selectedArticles,
-      episodeId,
-      generatedAt: new Date().toISOString(),
+    return NextResponse.json(result, {
+      headers: { "X-RateLimit-Remaining": String(remaining) },
     });
   } catch (error) {
     log.error("Error generando podcast", error);

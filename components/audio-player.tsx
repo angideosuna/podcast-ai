@@ -15,6 +15,7 @@ interface AudioPlayerProps {
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
+  episodeId?: string;
 }
 
 const SPEED_OPTIONS = [1, 1.25, 1.5, 2];
@@ -31,16 +32,23 @@ export function AudioPlayer({
   isLoading,
   error,
   onRetry,
+  episodeId,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    const saved = localStorage.getItem("podcast-ai-playback-speed");
+    const parsed = saved ? parseFloat(saved) : NaN;
+    return SPEED_OPTIONS.includes(parsed) ? parsed : 1;
+  });
   const [isDragging, setIsDragging] = useState(false);
+  const metricsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const listenTimeRef = useRef(0);
 
-  // Crear/actualizar el elemento de audio cuando cambia la URL
   useEffect(() => {
     if (!audioUrl) return;
 
@@ -69,12 +77,44 @@ export function AudioPlayer({
     };
   }, [audioUrl, isDragging]);
 
-  // Sincronizar velocidad de reproducción
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = speed;
     }
   }, [speed]);
+
+  // Metrics tracking: send every 30 seconds while playing
+  const sendMetrics = useCallback(() => {
+    if (!episodeId || !audioRef.current) return;
+    const audio = audioRef.current;
+    const completionRate = audio.duration > 0 ? audio.currentTime / audio.duration : 0;
+    fetch("/api/metrics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        episode_id: episodeId,
+        total_listen_time_seconds: Math.round(listenTimeRef.current),
+        completion_rate: Math.round(completionRate * 100) / 100,
+        playback_speed: speed,
+      }),
+    }).catch(() => {});
+  }, [episodeId, speed]);
+
+  useEffect(() => {
+    if (isPlaying && episodeId) {
+      const interval = setInterval(() => {
+        listenTimeRef.current += 10;
+      }, 10000);
+      metricsTimerRef.current = setInterval(sendMetrics, 30000);
+      return () => {
+        clearInterval(interval);
+        if (metricsTimerRef.current) clearInterval(metricsTimerRef.current);
+      };
+    } else if (!isPlaying && episodeId) {
+      // Send metrics on pause
+      sendMetrics();
+    }
+  }, [isPlaying, episodeId, sendMetrics]);
 
   const togglePlay = useCallback(async () => {
     if (!audioRef.current) return;
@@ -91,10 +131,11 @@ export function AudioPlayer({
   const cycleSpeed = () => {
     const currentIndex = SPEED_OPTIONS.indexOf(speed);
     const nextIndex = (currentIndex + 1) % SPEED_OPTIONS.length;
-    setSpeed(SPEED_OPTIONS[nextIndex]);
+    const newSpeed = SPEED_OPTIONS[nextIndex];
+    setSpeed(newSpeed);
+    localStorage.setItem("podcast-ai-playback-speed", String(newSpeed));
   };
 
-  // Seek al hacer click en la barra de progreso
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!audioRef.current || !progressRef.current) return;
     const rect = progressRef.current.getBoundingClientRect();
@@ -105,7 +146,6 @@ export function AudioPlayer({
     setCurrentTime(newTime);
   };
 
-  // Soporte para drag en la barra de progreso
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
     handleSeek(e);
@@ -137,13 +177,12 @@ export function AudioPlayer({
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Estado de carga
   if (isLoading) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-900/95 backdrop-blur-md">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-cream-light/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
-          <span className="text-sm text-slate-400">
+          <Loader2 className="h-5 w-5 animate-spin text-forest" />
+          <span className="text-sm text-muted">
             Generando audio del podcast...
           </span>
         </div>
@@ -151,17 +190,16 @@ export function AudioPlayer({
     );
   }
 
-  // Estado de error
   if (error) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-900/95 backdrop-blur-md">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-cream-light/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 py-4">
-          <AlertCircle className="h-5 w-5 text-red-400" />
-          <span className="text-sm text-slate-400">{error}</span>
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <span className="text-sm text-muted">{error}</span>
           {onRetry && (
             <button
               onClick={onRetry}
-              className="flex cursor-pointer items-center gap-1 rounded-full bg-slate-800 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+              className="flex cursor-pointer items-center gap-1 rounded-full bg-cream-dark/50 px-3 py-1.5 text-xs text-dark/70 transition-all duration-300 hover:bg-forest/10 hover:text-forest"
             >
               <RotateCcw className="h-3 w-3" />
               Reintentar
@@ -172,35 +210,32 @@ export function AudioPlayer({
     );
   }
 
-  // Sin audio disponible
   if (!audioUrl) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-900/95 backdrop-blur-md">
-      {/* Barra de progreso clickable (arriba del player) */}
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-cream-light/90 backdrop-blur-xl">
+      {/* Barra de progreso */}
       <div
         ref={progressRef}
-        className="group relative h-1 w-full cursor-pointer transition-all hover:h-2"
+        className="group relative h-1 w-full cursor-pointer transition-all duration-300 hover:h-2"
         onMouseDown={handleMouseDown}
       >
-        <div className="absolute inset-0 bg-slate-800" />
+        <div className="absolute inset-0 bg-cream-dark" />
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-violet-500"
+          className="absolute inset-y-0 left-0 bg-forest"
           style={{ width: `${progress}%` }}
         />
-        {/* Indicador circular al hacer hover */}
         <div
-          className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-md transition-opacity group-hover:opacity-100"
+          className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-forest opacity-0 shadow-md transition-opacity duration-300 group-hover:opacity-100"
           style={{ left: `calc(${progress}% - 6px)` }}
         />
       </div>
 
       {/* Controles */}
       <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-3">
-        {/* Play/Pause */}
         <button
           onClick={togglePlay}
-          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white text-slate-900 transition-transform hover:scale-105"
+          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-forest text-white transition-transform duration-300 hover:scale-105"
         >
           {isPlaying ? (
             <Pause className="h-5 w-5" />
@@ -209,23 +244,20 @@ export function AudioPlayer({
           )}
         </button>
 
-        {/* Info del episodio */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium text-white">
+          <span className="truncate text-sm font-medium text-dark">
             Tu podcast del dia
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
 
-        {/* Volumen (icono decorativo) */}
-        <Volume2 className="hidden h-4 w-4 text-slate-500 sm:block" />
+        <Volume2 className="hidden h-4 w-4 text-muted-light sm:block" />
 
-        {/* Control de velocidad */}
         <button
           onClick={cycleSpeed}
-          className="cursor-pointer rounded-full bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+          className="cursor-pointer rounded-full bg-cream-dark/50 px-3 py-1.5 text-xs font-medium text-dark/70 transition-all duration-300 hover:bg-forest/10 hover:text-forest"
         >
           {speed}x
         </button>

@@ -44,20 +44,20 @@ function LoginForm() {
     <div className="w-full max-w-md space-y-8">
       {/* Logo */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold">
-          <span className="text-blue-400">PodCast</span>
-          <span className="text-violet-400">.ai</span>
+        <h1 className="text-3xl font-bold font-serif">
+          <span className="text-forest">PodCast</span>
+          <span className="text-muted-light">.ai</span>
         </h1>
-        <p className="mt-2 text-slate-400">Inicia sesion en tu cuenta</p>
+        <p className="mt-2 text-muted">Inicia sesion en tu cuenta</p>
       </div>
 
       {/* Formulario */}
       <form onSubmit={handleLogin} className="space-y-6">
-        <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/50 p-6">
+        <div className="space-y-4 glass-card p-6">
           <div>
             <label
               htmlFor="email"
-              className="mb-1.5 block text-sm font-medium text-slate-300"
+              className="mb-1.5 block text-sm font-medium text-dark/80"
             >
               Email
             </label>
@@ -68,13 +68,13 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="tu@email.com"
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="glass-input w-full"
             />
           </div>
           <div>
             <label
               htmlFor="password"
-              className="mb-1.5 block text-sm font-medium text-slate-300"
+              className="mb-1.5 block text-sm font-medium text-dark/80"
             >
               Contrasena
             </label>
@@ -85,13 +85,13 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Tu contrasena"
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="glass-input w-full"
             />
           </div>
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
           </div>
         )}
@@ -99,17 +99,17 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full cursor-pointer rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-6 py-3 font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full cursor-pointer rounded-full bg-forest px-6 py-3 font-medium text-white transition-all duration-300 hover:bg-forest-light disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Iniciando sesion..." : "Iniciar sesion"}
         </button>
       </form>
 
-      <p className="text-center text-sm text-slate-500">
+      <p className="text-center text-sm text-muted-light">
         ¿No tienes cuenta?{" "}
         <Link
           href="/signup"
-          className="text-blue-400 transition-colors hover:text-blue-300"
+          className="text-forest underline transition-colors duration-300 hover:text-forest-light"
         >
           Registrate
         </Link>
@@ -120,10 +120,10 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-4 text-white">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-cream px-4 text-dark">
       <Suspense
         fallback={
-          <div className="text-slate-400">Cargando...</div>
+          <div className="text-muted">Cargando...</div>
         }
       >
         <LoginForm />

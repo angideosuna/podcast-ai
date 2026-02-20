@@ -1,0 +1,21 @@
+{
+  "polling": {
+    "rss_interval_minutes": 10,
+    "api_interval_minutes": 15
+  },
+  "processing": {
+    "batch_size": 20,
+    "max_age_hours": 48
+  },
+  "languages": ["es", "en"],
+  "categories": [
+    "technology",
+    "science",
+    "business",
+    "health",
+    "entertainment",
+    "sports",
+    "politics",
+    "general"
+  ]
+}

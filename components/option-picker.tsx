@@ -30,7 +30,7 @@ export function OptionPicker({
 }: OptionPickerProps) {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-stone-900">{title}</h3>
+      <h3 className="text-lg font-semibold text-dark">{title}</h3>
       <div className={`grid grid-cols-1 gap-3 ${GRID_COLS[columns]}`}>
         {options.map((option) => (
           <button
@@ -38,21 +38,21 @@ export function OptionPicker({
             type="button"
             onClick={() => onSelect(option.value)}
             className={`
-              flex flex-col items-center gap-2 rounded-2xl border-2 p-5
-              transition-all duration-200 cursor-pointer
+              flex flex-col items-center gap-2 rounded-2xl border p-5
+              transition-all duration-300 cursor-pointer
               ${
                 selected === option.value
-                  ? "border-stone-900 bg-stone-800/8 shadow-md shadow-stone-300/50"
-                  : "border-stone-200 bg-white hover:border-stone-400 hover:bg-stone-50"
+                  ? "border-forest/30 bg-forest/10 shadow-lg shadow-forest/5"
+                  : "glass-card hover:border-forest/20 hover:shadow-md hover:shadow-forest/5"
               }
             `}
           >
             <span className="text-2xl">{option.emoji}</span>
-            <span className="text-lg font-semibold text-stone-900">
+            <span className="text-lg font-semibold text-dark">
               {option.label}
             </span>
             {option.descripcion && (
-              <span className="text-xs text-stone-500">
+              <span className="text-xs text-muted">
                 {option.descripcion}
               </span>
             )}

@@ -8,7 +8,7 @@ import type { Profile } from "@/lib/types";
 import {
   NIVEL_CONOCIMIENTO_LABELS,
   OBJETIVO_PODCAST_LABELS,
-  HORARIO_ESCUCHA_LABELS,
+  PERIODICIDAD_LABELS,
 } from "@/lib/types";
 
 export default function PerfilPage() {
@@ -30,7 +30,8 @@ export default function PerfilPage() {
   const [ciudad, setCiudad] = useState("");
   const [nivelConocimiento, setNivelConocimiento] = useState("");
   const [objetivoPodcast, setObjetivoPodcast] = useState("");
-  const [horarioEscucha, setHorarioEscucha] = useState("");
+  const [horarioEscucha, setHorarioEscucha] = useState("08:00");
+  const [periodicidad, setPeriodicidad] = useState("");
 
   useEffect(() => {
     async function loadProfile() {
@@ -51,7 +52,8 @@ export default function PerfilPage() {
           setCiudad(data.profile.ciudad || "");
           setNivelConocimiento(data.profile.nivel_conocimiento || "");
           setObjetivoPodcast(data.profile.objetivo_podcast || "");
-          setHorarioEscucha(data.profile.horario_escucha || "");
+          setHorarioEscucha(data.profile.horario_escucha || "08:00");
+          setPeriodicidad(data.profile.periodicidad || "");
         }
       } catch {
         setMessage({ type: "error", text: "Error al cargar el perfil" });
@@ -81,6 +83,7 @@ export default function PerfilPage() {
           nivel_conocimiento: nivelConocimiento || null,
           objetivo_podcast: objetivoPodcast || null,
           horario_escucha: horarioEscucha || null,
+          periodicidad: periodicidad || null,
         }),
       });
 
@@ -102,36 +105,36 @@ export default function PerfilPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-100">
-        <Loader2 className="h-8 w-8 animate-spin text-stone-900" />
+      <div className="flex min-h-screen items-center justify-center bg-cream">
+        <Loader2 className="h-8 w-8 animate-spin text-forest" />
       </div>
     );
   }
 
   const selectClassName =
-    "w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-stone-900 transition-colors focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400";
+    "glass-input w-full";
   const inputClassName =
-    "w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-stone-900 placeholder-stone-400 transition-colors focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400";
+    "glass-input w-full";
 
   return (
-    <div className="min-h-screen bg-stone-100 px-4 py-12 text-stone-900">
+    <div className="min-h-screen bg-cream px-4 py-12 text-dark">
       <div className="mx-auto max-w-lg space-y-8">
         {/* Header */}
         <div className="text-center">
           <div className="text-4xl mb-3">👤</div>
           <h1 className="text-3xl font-bold">Tu perfil</h1>
           {profile?.email && (
-            <p className="mt-2 text-stone-500">{profile.email}</p>
+            <p className="mt-2 text-muted">{profile.email}</p>
           )}
         </div>
 
         {/* Formulario */}
         <form onSubmit={handleSave} className="space-y-6">
           {/* Datos personales */}
-          <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Datos personales</h2>
+          <div className="glass-card p-6 space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Datos personales</h2>
             <div>
-              <label htmlFor="nombre" className="mb-1.5 block text-sm font-medium text-stone-700">
+              <label htmlFor="nombre" className="mb-1.5 block text-sm font-medium text-dark/80">
                 Nombre
               </label>
               <input
@@ -145,7 +148,7 @@ export default function PerfilPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="edad" className="mb-1.5 block text-sm font-medium text-stone-700">
+                <label htmlFor="edad" className="mb-1.5 block text-sm font-medium text-dark/80">
                   Edad
                 </label>
                 <input
@@ -158,7 +161,7 @@ export default function PerfilPage() {
                 />
               </div>
               <div>
-                <label htmlFor="ciudad" className="mb-1.5 block text-sm font-medium text-stone-700">
+                <label htmlFor="ciudad" className="mb-1.5 block text-sm font-medium text-dark/80">
                   Ciudad
                 </label>
                 <input
@@ -172,7 +175,7 @@ export default function PerfilPage() {
               </div>
             </div>
             <div>
-              <label htmlFor="empresa" className="mb-1.5 block text-sm font-medium text-stone-700">
+              <label htmlFor="empresa" className="mb-1.5 block text-sm font-medium text-dark/80">
                 Empresa
               </label>
               <input
@@ -186,7 +189,7 @@ export default function PerfilPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="rol" className="mb-1.5 block text-sm font-medium text-stone-700">
+                <label htmlFor="rol" className="mb-1.5 block text-sm font-medium text-dark/80">
                   Rol
                 </label>
                 <input
@@ -199,7 +202,7 @@ export default function PerfilPage() {
                 />
               </div>
               <div>
-                <label htmlFor="sector" className="mb-1.5 block text-sm font-medium text-stone-700">
+                <label htmlFor="sector" className="mb-1.5 block text-sm font-medium text-dark/80">
                   Sector
                 </label>
                 <input
@@ -215,10 +218,10 @@ export default function PerfilPage() {
           </div>
 
           {/* Preferencias de podcast */}
-          <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Preferencias de podcast</h2>
+          <div className="glass-card p-6 space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Preferencias de podcast</h2>
             <div>
-              <label htmlFor="nivel" className="mb-1.5 block text-sm font-medium text-stone-700">
+              <label htmlFor="nivel" className="mb-1.5 block text-sm font-medium text-dark/80">
                 Nivel de conocimiento
               </label>
               <select
@@ -236,7 +239,7 @@ export default function PerfilPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="objetivo" className="mb-1.5 block text-sm font-medium text-stone-700">
+              <label htmlFor="objetivo" className="mb-1.5 block text-sm font-medium text-dark/80">
                 Objetivo del podcast
               </label>
               <select
@@ -254,17 +257,29 @@ export default function PerfilPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="horario" className="mb-1.5 block text-sm font-medium text-stone-700">
-                Horario de escucha
+              <label htmlFor="horario" className="mb-1.5 block text-sm font-medium text-dark/80">
+                Hora de escucha
               </label>
-              <select
+              <input
                 id="horario"
+                type="time"
                 value={horarioEscucha}
                 onChange={(e) => setHorarioEscucha(e.target.value)}
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <label htmlFor="periodicidad" className="mb-1.5 block text-sm font-medium text-dark/80">
+                Periodicidad
+              </label>
+              <select
+                id="periodicidad"
+                value={periodicidad}
+                onChange={(e) => setPeriodicidad(e.target.value)}
                 className={selectClassName}
               >
                 <option value="">Sin especificar</option>
-                {Object.entries(HORARIO_ESCUCHA_LABELS).map(([value, label]) => (
+                {Object.entries(PERIODICIDAD_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -288,7 +303,7 @@ export default function PerfilPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-stone-900 px-6 py-3 font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-forest px-6 py-3 font-medium text-white transition-all duration-300 hover:bg-forest-light disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -300,10 +315,10 @@ export default function PerfilPage() {
         </form>
 
         {/* Logout */}
-        <div className="border-t border-stone-200 pt-6">
+        <div className="border-t border-white/30 pt-6">
           <button
             onClick={handleLogout}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-red-200 px-6 py-3 font-medium text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-red-200 px-6 py-3 font-medium text-red-600 transition-all duration-300 hover:border-red-300 hover:bg-red-50"
           >
             <LogOut className="h-4 w-4" />
             Cerrar sesion

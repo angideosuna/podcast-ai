@@ -110,12 +110,13 @@ podcast-ai/
 │       ├── separator.tsx
 │       └── skeleton.tsx
 ├── lib/
-│   ├── generate-script.ts            # Generacion de guiones con Claude + ARTICLES_BY_DURATION
+│   ├── generate-script.ts            # Generacion de guiones con Claude + ARTICLES_BY_DURATION + timeout
 │   ├── elevenlabs.ts                 # TTS con ElevenLabs (chunking, voice selection)
 │   ├── tts-utils.ts                  # Limpieza de guion para TTS (regex Unicode emojis)
 │   ├── newsapi.ts                    # Cliente GNews API (fallback)
-│   ├── markdown.ts                   # Renderizado Markdown → HTML (tema claro)
-│   ├── topics.ts                     # 8 temas + TOPICS_MAP + getTopicById()
+│   ├── markdown.ts                   # Renderizado Markdown → HTML (tema claro, HTML sanitizado)
+│   ├── topics.ts                     # 8 temas + TOPICS_MAP + getTopicById() + TOPIC_TO_CATEGORIES
+│   ├── rate-limit.ts                 # Rate limiting en memoria para API routes
 │   ├── types.ts                      # Tipos centralizados (Article, Episode, Preferences, Profile)
 │   ├── logger.ts                     # Logger con contexto y colores
 │   ├── auth-utils.ts                 # Utilidad logout()
@@ -144,7 +145,8 @@ podcast-ai/
 │           ├── scripts/
 │           │   ├── fetch.ts          # CLI: npm run agent:fetch
 │           │   ├── process.ts        # CLI: npm run agent:process
-│           │   └── top.ts            # CLI: npm run agent:top [fecha]
+│           │   ├── top.ts            # CLI: npm run agent:top [fecha]
+│           │   └── cleanup.ts        # CLI: npm run agent:cleanup (limpia noticias antiguas)
 │           └── utils/
 │               ├── types.ts          # Tipos del agente
 │               └── env.ts            # Carga .env.local para scripts CLI
@@ -226,8 +228,35 @@ podcast-ai/
 - System prompt con personalidad de podcaster (identidad, expresiones, reglas de oro)
 - Prompt con noticias, instrucciones de tono detalladas (con ejemplos DO/DON'T), variaciones aleatorias
 - Si el usuario tiene perfil, inyecta bloque `PERFIL DEL OYENTE` (nombre, nivel, objetivo, horario)
-- `max_tokens`: 4000 (podcast 5min), 8000 (15min), 12000 (30min)
+- `max_tokens`: 4096 (podcast 5min), 8192 (15min), 12288 (30min) — dinamico segun duracion
 - `temperature`: 0.9
+- **Timeout**: 55 segundos (AbortController) para evitar bloqueos en Vercel
+- **Cliente singleton**: una sola instancia de Anthropic reutilizada entre peticiones
+
+**Sistema de prompts (v2):**
+
+| Componente | Descripcion |
+|-----------|-------------|
+| System prompt | Personalidad de podcaster: curioso, apasionado, cercano. Expresiones naturales del espanol de Espana. 15 frases prohibidas que suenan a IA. |
+| Tone instructions | Instrucciones detalladas por tono con ejemplos concretos de COMO SI y COMO NO debe sonar. |
+| Variabilidad | Pools aleatorios: 6 estilos de apertura, 5 de transicion, 5 de cierre. Cada episodio suena diferente. |
+| Estructura | Flexible, no rigida. Storytelling libre en vez de "Titular → Contexto → Opinion". |
+| Perfil del oyente | Bloque contextual inyectado despues de REGLAS INQUEBRANTABLES. Adapta nivel (principiante→explicar conceptos, experto→terminologia tecnica), objetivo (informar→resumen claro, entretener→contenido dinamico), y horario (manana→energia, noche→relajado). |
+
+**Constante compartida:** `ARTICLES_BY_DURATION` (exportada desde `generate-script.ts`) define cuantas noticias usar por duracion: `{5: 3, 15: 5, 30: 8}`. Se reutiliza en la API route.
+
+**Configuracion de tiempos:**
+
+| Duracion | Noticias | Intro | Cierre | Segundos/noticia |
+|----------|----------|-------|--------|-----------------|
+| 5 min | 3 | 30s | 30s | ~80s |
+| 15 min | 5 | 45s | 45s | ~150s |
+| 30 min | 8 | 60s | 60s | ~195s |
+
+**Tonos soportados:**
+- `casual`: Como Ibai contandote las noticias. Energia alta, humor, coloquial total. Con ejemplos DO/DON'T.
+- `profesional`: Analista tipo The Economist en espanol. Serio pero interesante, datos con peso, ironias puntuales. Con ejemplos DO/DON'T.
+- `deep-dive`: Experto apasionado tipo Jordi Wild. Contexto historico, conexiones inesperadas, analisis profundo. Con ejemplos DO/DON'T.
 
 **Uso en clasificacion (`src/agents/news-agent/processors/classifier.ts`):**
 - Batches de 10 articulos → Claude asigna categoria, relevancia 1-10, resumen, keywords
@@ -263,6 +292,20 @@ podcast-ai/
 | Endpoint | `https://gnews.io/api/v4/search` |
 | Tier | **Gratis** (100 req/dia, max 10 resultados por query) |
 | Estado | Funcionando como fallback |
+| Archivo | `lib/newsapi.ts` |
+
+**Mapeo de temas a busquedas GNews:**
+
+| Tema del usuario | Query en GNews |
+|-----------------|----------------|
+| tecnologia | `tecnologia OR technology` |
+| inteligencia-artificial | `inteligencia artificial OR AI` |
+| ciencia | `ciencia OR science` |
+| politica | `politica OR politics` |
+| economia | `economia OR finanzas` |
+| startups | `startups OR emprendimiento` |
+| salud | `salud OR medicina` |
+| cultura | `cultura OR entretenimiento` |
 
 ### 4.5 NewsAPI.org — Fuente de noticias del agente
 
@@ -304,6 +347,9 @@ podcast-ai/
 | Tier | **Gratis** (hobby) |
 | Estado | Configurado |
 | Project ID | `prj_YgUD18SkMpKPe4xkOxmqAs47uAlK` |
+| Org ID | `team_UnanlHXGfKm6eBPAdJNfbCMr` |
+| URL | https://podcast-ai-sigma.vercel.app |
+| maxDuration | 60s en `generate-audio/route.ts` |
 
 ---
 
@@ -581,6 +627,7 @@ npm run agent:fetch      # Recopila noticias de todas las fuentes → raw_news
 npm run agent:process    # Procesa batch de 20 noticias raw → classified processed_news
 npm run agent:top        # Muestra top 10 noticias mas relevantes de hoy
 npm run agent:top 2026-02-19  # Top 10 de una fecha especifica
+npm run agent:cleanup    # Limpia noticias antiguas (processed >7d, raw processed >7d, raw unprocessed >14d)
 ```
 
 ---
@@ -613,10 +660,98 @@ npm run agent:top 2026-02-19  # Top 10 de una fecha especifica
 
 ### 8.3 Rutas protegidas
 
-El archivo `proxy.ts` actua como middleware:
+El archivo `proxy.ts` actua como middleware (convencion Next.js 16):
 - Protege `/dashboard`, `/historial`, `/perfil` → redirige a `/login` si no hay sesion
 - Si el usuario logueado va a `/login` o `/signup` → redirige a `/dashboard`
 - Refresca el token de Supabase en cada request
+
+### 8.4 Rate limiting
+
+Las API routes tienen rate limiting en memoria (`lib/rate-limit.ts`):
+- `POST /api/generate-podcast`: 10 peticiones por minuto por IP
+- `POST /api/generate-audio`: 5 peticiones por minuto por IP
+- Limpieza automatica de entradas caducadas cada 60 segundos
+- Nota: en Vercel, cada instancia serverless tiene su propia memoria, por lo que el rate limit es por instancia
+
+### 8.5 Paginacion
+
+La pagina de historial (`/historial`) implementa paginacion:
+- 10 episodios por pagina
+- Boton "Cargar mas episodios" para cargar la siguiente pagina
+- Muestra contador total de episodios generados
+
+### 8.6 Flujos de usuario
+
+**Flujo A: Nuevo usuario (primera vez)**
+
+```
+1. Usuario abre la app
+   └→ GET / → redirect a /onboarding
+
+2. Onboarding - Paso 1: Encuesta personal ("Cuentanos sobre ti")
+   └→ Inputs: nombre*, edad, ciudad, rol, sector
+   └→ Pickers: nivel_conocimiento* (principiante/intermedio/experto)
+   └→           objetivo_podcast* (informarme/aprender/entretenerme)
+   └→           horario_escucha* (manana/mediodia/tarde/noche)
+   └→ (* = obligatorio)
+   └→ POST /api/profile con survey_completed=true
+
+3. Onboarding - Paso 2: Elegir temas
+   └→ Selecciona 3-5 temas de los 8 disponibles
+
+4. Onboarding - Paso 3: Configurar podcast
+   └→ Elige duracion: 5 min (Express), 15 min (Estandar), 30 min (Deep Dive)
+   └→ Elige tono: Casual, Profesional, Deep-dive
+   └→ Elige voz: Femenina o Masculina
+   └→ Guarda en localStorage + POST /api/preferences (si logueado)
+   └→ Redirect a /onboarding/confirmacion
+
+5. Confirmacion → Click "Generar mi primer podcast" → Redirect a /podcast
+
+6. Generacion del podcast (pagina /podcast)
+   └→ Proteccion doble-click: AbortController + boton deshabilitado
+   └→ POST /api/generate-podcast con {topics, duration, tone}
+      ├→ Validacion de inputs (topics, duration, tone, adjustments)
+      ├→ Rate limiting (10 req/min por IP)
+      ├→ fetchFromAgent(topics) — consulta processed_news (ultimas 48h)
+      ├→ Si no hay suficientes: fallback a GNews API
+      ├→ Fetch perfil del usuario (nombre, nivel, objetivo, horario)
+      ├→ generateScript() — Claude genera guion personalizado (timeout 55s)
+      └→ Guarda episodio en Supabase
+
+7. Resultado: guion renderizado + fuentes + BrowserAudioPlayer
+   └→ Botones: Regenerar, Ajustar, Cambiar preferencias
+
+8. Escuchar
+   └→ Opcion A: Web Speech API (gratis, en tiempo real)
+   └→ Opcion B: POST /api/generate-audio → ElevenLabs → MP3 → AudioPlayer
+```
+
+**Flujo B: Usuario recurrente**
+
+```
+1. Login → Supabase Auth → Auth callback con routing de 3 vias:
+   ├→ Tiene preferences → /dashboard
+   ├→ Tiene survey_completed pero no preferences → /onboarding?step=2
+   └→ No tiene survey → /onboarding
+
+2. Dashboard: saludo contextual, episodio del dia, ultimos 3, stats
+
+3. Historial: lista paginada (10/pagina) → detalle con guion + audio
+
+4. Ajustar episodio: dialog con sugerencias rapidas + texto libre → regenera
+```
+
+**Flujo C: Middleware (en cada request)**
+
+```
+1. Cada peticion HTTP pasa por proxy.ts (convencion Next.js 16)
+   └→ Refresca token de sesion de Supabase
+   └→ Si ruta protegida (/dashboard, /historial, /perfil) y no logueado:
+      └→ Redirect a /login?redirect=/ruta-original
+   └→ Si logueado y va a /login o /signup:
+      └→ Redirect a /dashboard
+```
 
 ---
 
@@ -624,10 +759,20 @@ El archivo `proxy.ts` actua como middleware:
 
 | Componente | Plataforma | URL |
 |------------|-----------|-----|
-| Frontend + API | Vercel | Dominio automatico de Vercel |
+| Frontend + API | Vercel | https://podcast-ai-sigma.vercel.app |
 | Base de datos | Supabase | `NEXT_PUBLIC_SUPABASE_URL` |
 | Storage (audio) | Supabase Storage | Bucket `podcast-audio` |
 | News Agent | Local (CLI manual) | No desplegado |
+
+**Vercel:**
+- Project ID: `prj_YgUD18SkMpKPe4xkOxmqAs47uAlK`
+- Org ID: `team_UnanlHXGfKm6eBPAdJNfbCMr`
+- No hay dominio custom configurado
+
+**CI/CD:**
+- GitHub repo: https://github.com/angideosuna/podcast-ai.git (rama `master`)
+- Deploy manual con `npx vercel --prod`
+- No hay pipelines custom, GitHub Actions, Docker, ni scripts de deploy dedicados
 
 ### 9.1 Como hacer deploy
 
@@ -667,6 +812,7 @@ npm run lint            # ESLint
 npm run agent:fetch     # Recopila noticias de 9 fuentes → raw_news
 npm run agent:process   # Procesa batch de 20 raw → processed_news (Claude)
 npm run agent:top       # Top 10 noticias mas relevantes de hoy
+npm run agent:cleanup   # Limpia noticias antiguas de la base de datos
 ```
 
 ### 10.2 Arrancar el proyecto en local
@@ -745,23 +891,61 @@ npm run build       # Build completo de produccion
 | Reproductor de audio completo (play, pause, seek, velocidad) | OK |
 | Ajustar/regenerar episodio con instrucciones | OK |
 | Dashboard con ultimo episodio y preferencias | OK |
-| Historial de episodios | OK |
+| Historial de episodios con paginacion | OK |
 | Detalle de episodio | OK |
 | Edicion de perfil | OK |
-| Markdown renderer (tema claro) | OK |
+| Markdown renderer (tema claro, HTML sanitizado) | OK |
 | Emoji removal universal (regex Unicode) en TTS | OK |
 | Sanitizacion de newlines en prompt | OK |
 | Logger profesional con contexto y colores | OK |
 | Tipos centralizados | OK |
 | getTopicById utility (evita TOPICS.find repetido) | OK |
 | Constante ARTICLES_BY_DURATION compartida | OK |
+| TOPIC_TO_CATEGORIES centralizado en lib/topics.ts | OK |
 | Cliente Supabase reutilizado en route | OK |
 | Log warning en profile catch (no silencioso) | OK |
 | JSON.parse seguro en localStorage | OK |
 | Response.ok antes de JSON parse | OK |
+| Rate limiting en API routes (por IP) | OK |
+| Filtro de 48h en fetchFromAgent (noticias frescas) | OK |
+| max_tokens dinamico segun duracion (4096/8192/12288) | OK |
+| Timeout de 55s en llamadas a Claude (AbortController) | OK |
+| Cliente Anthropic singleton (reutilizado entre peticiones) | OK |
+| Script de limpieza de noticias antiguas (agent:cleanup) | OK |
+| HTML sanitizado en renderMarkdown (prevencion XSS) | OK |
+| Middleware activo (proxy.ts, convencion Next.js 16) | OK |
 | Build de produccion | OK |
 
-### 11.2 A medias / con limitaciones
+### 11.2 Changelog
+
+**v5 — Bug fixes, validacion, robustez y calidad de codigo:**
+- Markdown renderer: colores tema oscuro → tema claro (text-stone-*)
+- response.ok antes de JSON parse (evita crash con error no-JSON)
+- JSON.parse seguro en localStorage (try-catch con fallback)
+- Validacion estricta de inputs en API (topics, duration, tone, adjustments)
+- Proteccion doble-click con AbortController + isGenerating flag
+- Cliente Supabase reutilizado en route (1 en vez de 2)
+- Batch upsert en saveRawNews (1 query en vez de N+1)
+- Retry con backoff en clasificador (1 reintento, 3s delay)
+- JSON parsing robusto en clasificador (objetos sueltos, trailing commas, defaults)
+- Emoji removal universal (regex Unicode en vez de lista hardcodeada)
+- getTopicById() centralizado (en vez de TOPICS.find() repetido en 5+ archivos)
+- Sanitizacion de newlines en prompt (titulo y descripcion de articulos)
+- Log warning en profile catch (en vez de catch silencioso)
+
+**v6 — Seguridad, rendimiento, robustez y observabilidad:**
+- Middleware restaurado y activo (proxy.ts, convencion Next.js 16)
+- Rate limiting en API routes (10/min podcast, 5/min audio, por IP)
+- Filtro de 48h en fetchFromAgent (solo noticias frescas)
+- max_tokens dinamico segun duracion (4096/8192/12288)
+- Timeout de 55s en llamadas a Claude (AbortController)
+- Script de limpieza de noticias antiguas (agent:cleanup)
+- HTML sanitizado en renderMarkdown (escapeHtml, prevencion XSS)
+- Paginacion en historial (10 por pagina, "Cargar mas")
+- TOPIC_TO_CATEGORIES centralizado en lib/topics.ts
+- Cliente Anthropic singleton (reutilizado entre peticiones)
+
+### 11.3 A medias / con limitaciones
 
 | Feature | Estado |
 |---------|--------|
@@ -769,16 +953,17 @@ npm run build       # Build completo de produccion
 | News Agent sin automatizar | Se ejecuta manualmente con `npm run agent:fetch/process`. Deberia automatizarse con cron o scheduler. |
 | Tabla `trending_topics` | Creada en la migracion pero no se usa activamente en la app. |
 
-### 11.3 TODO — Pendiente
+### 11.4 TODO — Pendiente
 
 | Tarea | Prioridad |
 |-------|-----------|
 | Automatizar agent:fetch y agent:process con cron/scheduler | Media |
 | Tests unitarios (al menos newsapi.ts, generate-script.ts, elevenlabs.ts) | Media |
-| Paginacion en historial (carga todos los episodios de golpe) | Baja |
 | Dominio custom (solo tiene el dominio automatico de Vercel) | Baja |
 | Usar trending_topics para sugerir temas | Baja |
 | Muxer MP3 para concatenacion correcta de chunks | Baja |
+| Filtros en historial (por tema, tono o fecha) | Baja |
+| Rate limiting persistente (Redis) para Vercel multi-instancia | Baja |
 
 ---
 
@@ -808,3 +993,20 @@ npm run build       # Build completo de produccion
 | Solo Web Speech API (sin ElevenLabs) | ~$2-5/mes (solo Claude) |
 | Con ElevenLabs (uso moderado) | ~$7-15/mes (Claude + ElevenLabs) |
 | Todo gratis excepto Claude | ~$2-5/mes |
+
+---
+
+## Apendice: Credenciales
+
+Todas las cuentas estan creadas y configuradas en `.env.local`:
+
+| Servicio | Estado | Plan | Donde obtenerla |
+|----------|--------|------|-----------------|
+| **Supabase** | Configurado | Gratis | https://supabase.com |
+| **Anthropic** | Configurado | De pago | https://console.anthropic.com |
+| **ElevenLabs** | Configurado | De pago | https://elevenlabs.io |
+| **GNews** | Configurado | Gratis (100 req/dia) | https://gnews.io |
+| **NewsAPI.org** | Configurado | Gratis (100 req/dia) | https://newsapi.org |
+| **Vercel** | Configurado | Gratis | https://vercel.com |
+
+Para clonar el proyecto: copiar `.env.example` a `.env.local`, rellenar los valores, y ejecutar las 4 migraciones SQL en el editor de Supabase.

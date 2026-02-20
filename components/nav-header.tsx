@@ -32,12 +32,12 @@ export function NavHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 border-b border-white/30 bg-cream/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         {/* Logo */}
-        <Link href="/dashboard" className="text-xl font-bold">
-          <span className="text-blue-400">PodCast</span>
-          <span className="text-violet-400">.ai</span>
+        <Link href="/dashboard" className="text-xl font-bold font-serif">
+          <span className="text-forest">PodCast</span>
+          <span className="text-muted-light">.ai</span>
         </Link>
 
         {/* Nav desktop */}
@@ -48,10 +48,10 @@ export function NavHeader() {
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-300 ${
                   isActive
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
+                    ? "bg-forest/10 text-forest"
+                    : "text-muted hover:bg-forest/5 hover:text-forest"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -61,7 +61,7 @@ export function NavHeader() {
           })}
           <button
             onClick={handleLogout}
-            className="ml-2 flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-800/50 hover:text-red-400"
+            className="ml-2 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-muted-light transition-all duration-300 hover:bg-red-50 hover:text-red-600"
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -70,7 +70,7 @@ export function NavHeader() {
         {/* Menu hamburguesa mobile */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white sm:hidden"
+          className="cursor-pointer rounded-xl p-2 text-muted transition-all duration-300 hover:bg-forest/10 hover:text-forest sm:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -78,7 +78,7 @@ export function NavHeader() {
 
       {/* Nav mobile */}
       {menuOpen && (
-        <nav className="border-t border-slate-800 px-4 py-2 sm:hidden">
+        <nav className="border-t border-white/30 px-4 py-2 sm:hidden">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const isActive = pathname === href || pathname.startsWith(href + "/");
             return (
@@ -86,10 +86,10 @@ export function NavHeader() {
                 key={href}
                 href={href}
                 onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ${
                   isActive
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
+                    ? "bg-forest/10 text-forest"
+                    : "text-muted hover:bg-forest/5 hover:text-forest"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -99,7 +99,7 @@ export function NavHeader() {
           })}
           <button
             onClick={handleLogout}
-            className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-slate-800/50"
+            className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition-all duration-300 hover:bg-red-50"
           >
             <LogOut className="h-4 w-4" />
             Cerrar sesion

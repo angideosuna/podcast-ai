@@ -28,14 +28,14 @@ export function OtrosSection({ customTopics, onAdd, onRemove }: OtrosSectionProp
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
+    <div className="overflow-hidden rounded-2xl glass-card">
       <div className="px-5 py-4">
         <div className="flex items-center gap-2">
           <span className="text-2xl">✏️</span>
-          <span className="text-lg font-semibold text-stone-900">Otros</span>
+          <span className="text-lg font-semibold text-dark">Otros</span>
         </div>
 
-        <p className="mt-1 text-sm text-stone-500">
+        <p className="mt-1 text-sm text-muted">
           Agrega temas que no aparezcan en las categorías
         </p>
 
@@ -48,18 +48,18 @@ export function OtrosSection({ customTopics, onAdd, onRemove }: OtrosSectionProp
             onKeyDown={handleKeyDown}
             placeholder="Ej: Blockchain, Yoga..."
             maxLength={50}
-            className="flex-1 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm text-stone-900 placeholder-stone-400 transition-colors focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400"
+            className="glass-input flex-1 text-sm"
           />
           <button
             type="button"
             onClick={handleAdd}
             disabled={!input.trim()}
             className={`
-              flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold transition-colors cursor-pointer
+              flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold transition-all duration-300 cursor-pointer
               ${
                 input.trim()
-                  ? "bg-stone-900 text-white hover:opacity-90"
-                  : "bg-stone-200 text-stone-400 cursor-not-allowed"
+                  ? "bg-forest text-white hover:bg-forest-light shadow-md shadow-forest/10"
+                  : "bg-cream-dark text-muted-light cursor-not-allowed"
               }
             `}
             aria-label="Agregar tema"
@@ -74,13 +74,13 @@ export function OtrosSection({ customTopics, onAdd, onRemove }: OtrosSectionProp
             {customTopics.map((label) => (
               <span
                 key={label}
-                className="inline-flex items-center gap-1.5 rounded-full bg-stone-900 px-3.5 py-1.5 text-sm font-medium text-white"
+                className="inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-1.5 text-sm font-medium text-white shadow-md shadow-forest/10"
               >
                 {label}
                 <button
                   type="button"
                   onClick={() => onRemove(label)}
-                  className="flex h-4 w-4 items-center justify-center rounded-full hover:bg-white/20 transition-colors cursor-pointer"
+                  className="flex h-4 w-4 items-center justify-center rounded-full hover:bg-white/20 transition-colors duration-300 cursor-pointer"
                   aria-label={`Eliminar ${label}`}
                 >
                   &times;

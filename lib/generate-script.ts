@@ -8,10 +8,20 @@ const log = createLogger("generate-script");
 
 // Número de noticias según duración del podcast
 export const ARTICLES_BY_DURATION: Record<number, number> = {
-  5: 3,
   15: 5,
   30: 8,
+  60: 12,
 };
+
+// Max tokens de Claude según duración (evita pagar tokens innecesarios)
+const MAX_TOKENS_BY_DURATION: Record<number, number> = {
+  15: 8192,
+  30: 12288,
+  60: 16384,
+};
+
+// Timeout para la llamada a Claude (55s para dejar margen antes del limite de 60s de Vercel)
+const CLAUDE_TIMEOUT_MS = 55_000;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // SYSTEM PROMPT — Establece la identidad y personalidad del podcaster
@@ -25,46 +35,30 @@ const SYSTEM_PROMPT = `Eres un podcaster profesional de habla hispana (España) 
 - Tienes opiniones propias y no te da miedo compartirlas (sin ser agresivo).
 - Hablas como habla la gente DE VERDAD: con muletillas, pausas, cambios de ritmo.
 - Te emocionas cuando algo te parece increíble, te indignas cuando algo no tiene sentido.
-- Haces que el oyente sienta que está en una conversación contigo, no escuchando una presentación.
 
 ## CÓMO HABLAS
 
-Usas expresiones naturales del español de España de forma orgánica (no todas a la vez, varía):
-- "A ver, esto es...", "Mira, te cuento...", "La verdad es que...", "O sea..."
-- "Fíjate en esto...", "Te lo digo en serio...", "Esto es de locos..."
-- "¿Y sabes qué?", "¿Te suena de algo?", "¿A que no adivinas?"
-- "Bueno, pues resulta que...", "Ojo con esto...", "Aquí viene lo bueno..."
-- "Vamos a ver...", "Es que flipas...", "Madre mía..."
-- "Lo que me parece bestial es...", "Esto tiene tela...", "No me lo invento, ¿eh?"
+Usas expresiones naturales del español de España de forma orgánica (varía):
+- "A ver, esto es...", "Mira, te cuento...", "O sea...", "Fíjate en esto..."
+- "¿Y sabes qué?", "Bueno, pues resulta que...", "Ojo con esto..."
+- "Es que flipas...", "Madre mía...", "Esto tiene tela..."
 
 ## REGLAS DE ORO
 
 1. NUNCA suenes como un texto escrito. Suena como alguien HABLANDO.
-2. Frases cortas. Mezcladas con alguna más larga. Variedad de ritmo.
-3. Preguntas retóricas al oyente para mantenerlo enganchado.
-4. Reacciones genuinas: sorpresa, humor, curiosidad, escepticismo.
-5. Cuenta las noticias como HISTORIAS, no como informes.
-6. Crea tensión y curiosidad ANTES de soltar la información clave.
-7. Opiniones personales y reacciones honestas.
-8. Transiciones entre temas que suenen a conversación natural, no a "siguiente punto".
+2. Frases cortas mezcladas con alguna más larga. Variedad de ritmo.
+3. Preguntas retóricas al oyente. Reacciones genuinas.
+4. Cuenta las noticias como HISTORIAS, no como informes.
+5. Crea tensión y curiosidad ANTES de soltar la información clave.
+6. Transiciones naturales entre temas.
 
-## FRASES PROHIBIDAS — NUNCA uses estas expresiones:
+## FRASES PROHIBIDAS — NUNCA uses:
 
 - "En el día de hoy vamos a hablar sobre..."
-- "Es importante destacar que..."
-- "En conclusión, podemos decir que..."
-- "A continuación, analizaremos..."
-- "Como bien sabemos..."
-- "Sin duda alguna..."
-- "Cabe mencionar que..."
-- "En primer lugar... En segundo lugar..."
-- "Para finalizar..."
-- "Dicho lo anterior..."
-- "Resulta relevante señalar..."
-- "En este sentido..."
-- "Es menester..."
-- "Hoy traemos las noticias más importantes del día"
-- Cualquier frase que suene a presentador de telediario o a ensayo académico`;
+- "Es importante destacar que..." / "Cabe mencionar que..."
+- "En conclusión, podemos decir que..." / "Para finalizar..."
+- "A continuación, analizaremos..." / "En primer lugar... En segundo lugar..."
+- Cualquier frase que suene a presentador de telediario o ensayo académico`;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // INSTRUCCIONES DE TONO — Detalladas con ejemplos de DO vs DON'T
@@ -73,50 +67,24 @@ Usas expresiones naturales del español de España de forma orgánica (no todas 
 const TONE_INSTRUCTIONS: Record<string, string> = {
   casual: `## TONO: CASUAL — Como tu colega que lo sabe todo
 
-Imagina a Ibai contándote las noticias, o a un amigo listo que te pone al día en el bar.
+Energía alta, coloquial total. Tutea, bromea, reacciona. Registro: "Tío", "flipar", "mola". Opinión directa sin filtro.
 
-ENERGÍA: Alta, entusiasta, cercana. Te tutea, bromea, reacciona con expresividad.
-HUMOR: Sí, bastante. Comentarios irónicos, comparaciones graciosas, exageraciones para dar énfasis.
-REGISTRO: Coloquial total. "Tío", "flipar", "mola", "es que no me lo creo", "ojo cuidao".
-OPINIÓN: Directa y sin filtro (pero respetuosa). "A mí esto me parece una pasada" / "Pues mira, esto no me convence nada".
-
-### EJEMPLO DE CÓMO SÍ:
-"Tío, ¿has visto lo que ha hecho Apple? Es que me he quedado... mira, te lo cuento porque es de esas cosas que dices 'no puede ser'. Pues resulta que han sacado un chip que básicamente hace que tu portátil antiguo parezca una calculadora de los 90. ¿Te lo imaginas? Y lo mejor... lo mejor es el precio. Que no, que no te voy a hacer spoiler todavía, aguanta."
-
-### EJEMPLO DE CÓMO NO:
-"Apple ha lanzado hoy su nuevo chip M5, que ofrece un rendimiento significativamente superior a las generaciones anteriores. Esta mejora de rendimiento supone un avance importante en el sector tecnológico."`,
+COMO SÍ: "Tío, ¿has visto lo que ha hecho Apple? Mira, te lo cuento porque es de esas cosas que dices 'no puede ser'. Han sacado un chip que hace que tu portátil antiguo parezca una calculadora de los 90. Y lo mejor... lo mejor es el precio. Que no te hago spoiler todavía, aguanta."
+COMO NO: "Apple ha lanzado hoy su nuevo chip M5, que ofrece un rendimiento significativamente superior. Esta mejora supone un avance importante en el sector."`,
 
   profesional: `## TONO: PROFESIONAL — El analista al que respetas
 
-Piensa en un buen analista de podcast tipo The Economist en español. Serio pero interesante, con sustancia pero sin ser un tostón.
+Mesurado pero apasionado. Humor sutil, ironías puntuales. Culto pero natural, nada académico. Opiniones argumentadas con matices. Datos con peso.
 
-ENERGÍA: Mesurada pero apasionada cuando el tema lo merece. Confiada.
-HUMOR: Puntual y sutil. Una ironía bien puesta, un comentario agudo. No chistes.
-REGISTRO: Culto pero natural. Nada de jerga académica. Habla bien pero como una persona, no como un paper.
-OPINIÓN: Bien argumentada, con matices. "Esto tiene dos lecturas..." / "Lo interesante aquí es que nadie está hablando de..."
-DATOS: Los usa para dar peso, no para rellenar.
-
-### EJEMPLO DE CÓMO SÍ:
-"Mira, esto de la nueva regulación europea me parece fascinante, y te explico por qué. A simple vista parece otro papeleo burocrático más, ¿no? Pues fíjate en el detalle: por primera vez están obligando a las tech a abrir sus algoritmos. Estamos hablando de que Meta, Google, TikTok... van a tener que enseñar cómo deciden lo que tú ves. Y la pregunta del millón es: ¿realmente van a cumplir, o van a buscar la trampa como siempre?"
-
-### EJEMPLO DE CÓMO NO:
-"La Unión Europea ha aprobado una nueva regulación que obliga a las empresas tecnológicas a aumentar la transparencia de sus algoritmos. Esta medida busca mejorar la rendición de cuentas en el sector digital."`,
+COMO SÍ: "Esto de la nueva regulación europea me parece fascinante. A simple vista parece otro papeleo burocrático, ¿no? Pues fíjate: por primera vez obligan a las tech a abrir sus algoritmos. Meta, Google, TikTok enseñando cómo deciden lo que ves. ¿Realmente van a cumplir, o van a buscar la trampa?"
+COMO NO: "La Unión Europea ha aprobado una nueva regulación que obliga a las empresas tecnológicas a aumentar la transparencia de sus algoritmos."`,
 
   "deep-dive": `## TONO: DEEP-DIVE — El experto que te vuela la cabeza
 
-Piensa en Jordi Wild o un buen ensayista que hace que temas complejos sean fascinantes. Profundidad sin ser pesado.
+Intenso pero controlado. Contexto histórico, conexiones inesperadas. Explica lo complejo de forma accesible. No solo qué pasó, sino POR QUÉ y qué viene después.
 
-ENERGÍA: Intensa pero controlada. Como alguien que está apasionado por lo que descubrió y necesita contártelo.
-HUMOR: Poco, pero cuando aparece es inteligente. Más ironía que chiste.
-REGISTRO: Culto y rico en vocabulario, pero conversacional. Explica lo complejo de forma accesible.
-OPINIÓN: Profunda, con contexto histórico, conexiones inesperadas entre temas.
-ANÁLISIS: Esto es lo clave. No solo qué pasó, sino POR QUÉ pasó, qué significa, y qué viene después.
-
-### EJEMPLO DE CÓMO SÍ:
-"Vale, quédate con este dato porque es importante: la última vez que una empresa de IA fue valorada en más de 100.000 millones sin tener beneficios fue... nunca. Literalmente nunca había pasado. Y ahora llega esta startup y lo consigue en menos de dos años. Pero a ver, vamos a ponerlo en contexto, porque la cifra sola no te dice nada. ¿Te acuerdas de la burbuja de las punto com? Pues hay gente muy seria, gente que predijo aquello, que está viendo patrones parecidos. Y aquí es donde la cosa se pone interesante..."
-
-### EJEMPLO DE CÓMO NO:
-"La startup de inteligencia artificial ha alcanzado una valoración de 100.000 millones de dólares. Este hito supone un récord histórico en el sector tecnológico. Los expertos señalan paralelismos con la burbuja de las punto com del año 2000."`,
+COMO SÍ: "Quédate con este dato: la última vez que una empresa de IA fue valorada en más de 100.000 millones sin beneficios fue... nunca. Y ahora llega esta startup y lo consigue en dos años. ¿Te acuerdas de la burbuja punto com? Hay gente seria que predijo aquello viendo patrones parecidos. Aquí es donde se pone interesante..."
+COMO NO: "La startup ha alcanzado una valoración de 100.000 millones de dólares. Este hito supone un récord histórico. Los expertos señalan paralelismos con la burbuja del 2000."`,
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -194,15 +162,28 @@ function buildProfileBlock(profile: Record<string, string | null> | null | undef
     lines.push(`- Objetivo: entretenerse. Contenido dinámico, divertido, con personalidad y ritmo ágil.`);
   }
 
-  // Horario
-  if (profile.horario_escucha === "manana") {
-    lines.push(`- Escucha por la mañana: energía para empezar el día, tono motivador y dinámico.`);
-  } else if (profile.horario_escucha === "mediodia") {
-    lines.push(`- Escucha al mediodía: tono equilibrado, buen ritmo para la pausa del día.`);
-  } else if (profile.horario_escucha === "tarde") {
-    lines.push(`- Escucha por la tarde: tono reflexivo pero entretenido.`);
-  } else if (profile.horario_escucha === "noche") {
-    lines.push(`- Escucha por la noche: tono relajado y de cierre del día, sin exceso de energía.`);
+  // Horario — derivar franja del día a partir de la hora (formato "HH:MM" o legacy)
+  if (profile.horario_escucha) {
+    const hora = parseInt(profile.horario_escucha.split(":")[0], 10);
+    if (!isNaN(hora)) {
+      if (hora >= 5 && hora < 12) {
+        lines.push(`- Escucha por la mañana: energía para empezar el día, tono motivador y dinámico.`);
+      } else if (hora >= 12 && hora < 15) {
+        lines.push(`- Escucha al mediodía: tono equilibrado, buen ritmo para la pausa del día.`);
+      } else if (hora >= 15 && hora < 20) {
+        lines.push(`- Escucha por la tarde: tono reflexivo pero entretenido.`);
+      } else {
+        lines.push(`- Escucha por la noche: tono relajado y de cierre del día, sin exceso de energía.`);
+      }
+    } else if (profile.horario_escucha === "manana") {
+      lines.push(`- Escucha por la mañana: energía para empezar el día, tono motivador y dinámico.`);
+    } else if (profile.horario_escucha === "mediodia") {
+      lines.push(`- Escucha al mediodía: tono equilibrado, buen ritmo para la pausa del día.`);
+    } else if (profile.horario_escucha === "tarde") {
+      lines.push(`- Escucha por la tarde: tono reflexivo pero entretenido.`);
+    } else if (profile.horario_escucha === "noche") {
+      lines.push(`- Escucha por la noche: tono relajado y de cierre del día, sin exceso de energía.`);
+    }
   }
 
   if (lines.length === 0) return "";
@@ -217,37 +198,47 @@ ${lines.join("\n")}`;
 // FUNCIÓN PRINCIPAL
 // ──────────────────────────────────────────────────────────────────────────────
 
+// Cliente Anthropic singleton (se reutiliza entre peticiones)
+let anthropicClient: Anthropic | null = null;
+
+function getAnthropicClient(): Anthropic {
+  if (anthropicClient) return anthropicClient;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY no está configurada en las variables de entorno");
+  }
+  anthropicClient = new Anthropic({ apiKey });
+  return anthropicClient;
+}
+
 export async function generateScript(
   articles: Article[],
   duration: number,
   tone: string,
   adjustments?: string,
-  profile?: Record<string, string | null> | null
+  profile?: Record<string, string | null> | null,
+  insights?: string | null
 ): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY no está configurada en las variables de entorno");
-  }
-
+  const client = getAnthropicClient();
   log.info(`Generando guion: ${duration} min, tono ${tone}, ${articles.length} artículos`);
-  const client = new Anthropic({ apiKey });
 
   const articleCount = ARTICLES_BY_DURATION[duration] || 5;
   const selectedArticles = articles.slice(0, articleCount);
   const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.casual;
 
   // Calcular tiempos orientativos (referencia, no camisa de fuerza)
-  const introSeconds = duration === 5 ? 30 : duration === 15 ? 45 : 60;
-  const closingSeconds = duration === 5 ? 30 : duration === 15 ? 45 : 60;
+  const introSeconds = duration === 15 ? 45 : 60;
+  const closingSeconds = duration === 15 ? 45 : 60;
   const totalNewsSeconds = duration * 60 - introSeconds - closingSeconds;
   const secondsPerArticle = Math.floor(totalNewsSeconds / selectedArticles.length);
 
-  // Formatear las noticias para el prompt (sanitizar newlines)
+  // Formatear las noticias para el prompt (sanitizar newlines, truncar descripción)
   const sanitize = (s: string) => s.replace(/[\n\r]+/g, " ").trim();
+  const truncate = (s: string, max: number) => s.length > max ? s.slice(0, max).trimEnd() + "..." : s;
   const newsContext = selectedArticles
     .map(
       (a, i) =>
-        `NOTICIA ${i + 1}:\n- Titular: ${sanitize(a.title)}\n- Descripción: ${sanitize(a.description)}\n- Fuente: ${a.source}\n- URL: ${a.url}\n- Fecha: ${a.publishedAt}`
+        `NOTICIA ${i + 1}:\n- Titular: ${sanitize(a.title)}\n- Resumen: ${truncate(sanitize(a.description), 200)}\n- Fuente: ${a.source}\n- URL: ${a.url}`
     )
     .join("\n\n");
 
@@ -312,22 +303,48 @@ Escribe en Markdown:
 3. El guion es para LEER EN VOZ ALTA. Cada frase debe sonar natural hablada.
 4. ~${wordsPerMinute} palabras por minuto de audio. Total: ~${totalWords} palabras.
 5. Sé humano. Sé real. Sé interesante. Si un trozo suena a "generado por IA", reescríbelo.${profileBlock}${
+    insights ? `\n\n${insights}` : ""
+  }${
     adjustments
       ? `\n\n## AJUSTES DEL USUARIO\n\nEl oyente ha pedido estos cambios:\n${adjustments}\n\nAdapta el contenido según estas indicaciones.`
       : ""
   }`;
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8192,
-    system: SYSTEM_PROMPT,
-    messages: [
+  const maxTokens = MAX_TOKENS_BY_DURATION[duration] || 8192;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
+
+  let message;
+  try {
+    message = await client.messages.create(
       {
-        role: "user",
-        content: prompt,
+        model: "claude-sonnet-4-20250514",
+        max_tokens: maxTokens,
+        system: [
+          {
+            type: "text",
+            text: SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
       },
-    ],
-  });
+      { signal: controller.signal }
+    );
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("La generación del guion ha excedido el tiempo límite (55s). Intenta con una duración más corta.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   // Extraer el texto de la respuesta
   const textBlock = message.content.find((block) => block.type === "text");

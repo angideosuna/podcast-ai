@@ -51,8 +51,8 @@ export default function ConfirmacionPage() {
 
   if (!preferences) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-100">
-        <div className="text-stone-500">Cargando...</div>
+      <div className="flex min-h-screen items-center justify-center bg-cream">
+        <div className="text-muted">Cargando...</div>
       </div>
     );
   }
@@ -64,40 +64,40 @@ export default function ConfirmacionPage() {
   });
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-stone-100 px-4 text-stone-900">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-cream px-4 text-dark">
       <div className="w-full max-w-lg space-y-8 text-center">
         {/* Icono de éxito */}
         <div className="text-6xl">🎉</div>
 
         <div>
           <h1 className="text-3xl font-bold">¡Todo listo!</h1>
-          <p className="mt-2 text-stone-500">
+          <p className="mt-2 text-muted">
             Tu podcast personalizado está siendo preparado
           </p>
         </div>
 
         {/* Resumen del perfil */}
         {profile && profile.survey_completed && (
-          <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-6 text-left">
-            <h2 className="text-lg font-semibold text-stone-800">Tu perfil</h2>
+          <div className="glass-card p-6 space-y-4 text-left">
+            <h2 className="text-lg font-semibold text-dark">Tu perfil</h2>
             <div className="flex flex-wrap gap-2">
               {profile.nombre && (
-                <span className="rounded-full bg-stone-800/8 px-3 py-1 text-sm text-stone-900">
+                <span className="rounded-full bg-forest/10 px-3 py-1 text-sm text-dark">
                   👤 {profile.nombre}
                 </span>
               )}
               {profile.nivel_conocimiento && (
-                <span className="rounded-full bg-stone-800/8 px-3 py-1 text-sm text-stone-900">
+                <span className="rounded-full bg-forest/10 px-3 py-1 text-sm text-dark">
                   📊 {NIVEL_CONOCIMIENTO_LABELS[profile.nivel_conocimiento] || profile.nivel_conocimiento}
                 </span>
               )}
               {profile.objetivo_podcast && (
-                <span className="rounded-full bg-stone-800/8 px-3 py-1 text-sm text-stone-900">
+                <span className="rounded-full bg-forest/10 px-3 py-1 text-sm text-dark">
                   🎯 {OBJETIVO_PODCAST_LABELS[profile.objetivo_podcast] || profile.objetivo_podcast}
                 </span>
               )}
               {profile.rol && (
-                <span className="rounded-full bg-stone-800/8 px-3 py-1 text-sm text-stone-900">
+                <span className="rounded-full bg-forest/10 px-3 py-1 text-sm text-dark">
                   💼 {profile.rol}
                 </span>
               )}
@@ -106,16 +106,16 @@ export default function ConfirmacionPage() {
         )}
 
         {/* Resumen de preferencias */}
-        <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-6 text-left">
-          <h2 className="text-lg font-semibold text-stone-800">Tu configuración</h2>
+        <div className="glass-card p-6 space-y-4 text-left">
+          <h2 className="text-lg font-semibold text-dark">Tu configuración</h2>
 
           <div>
-            <p className="text-sm font-medium text-stone-500">Temas</p>
+            <p className="text-sm font-medium text-muted">Temas</p>
             <div className="mt-1 flex flex-wrap gap-2">
               {selectedTopicNames.map((name) => (
                 <span
                   key={name}
-                  className="rounded-full bg-stone-800/8 px-3 py-1 text-sm text-stone-900"
+                  className="rounded-full bg-forest/10 px-3 py-1 text-sm text-dark"
                 >
                   {name}
                 </span>
@@ -125,18 +125,18 @@ export default function ConfirmacionPage() {
 
           <div className="flex gap-8">
             <div>
-              <p className="text-sm font-medium text-stone-500">Duración</p>
-              <p className="mt-1 text-lg text-stone-900">{preferences.duration} minutos</p>
+              <p className="text-sm font-medium text-muted">Duración</p>
+              <p className="mt-1 text-lg text-dark">{preferences.duration >= 60 ? `${preferences.duration / 60} hora` : `${preferences.duration} minutos`}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-stone-500">Tono</p>
-              <p className="mt-1 text-lg text-stone-900">
+              <p className="text-sm font-medium text-muted">Tono</p>
+              <p className="mt-1 text-lg text-dark">
                 {TONE_LABELS[preferences.tone] || preferences.tone}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-stone-500">Voz</p>
-              <p className="mt-1 text-lg text-stone-900">
+              <p className="text-sm font-medium text-muted">Voz</p>
+              <p className="mt-1 text-lg text-dark">
                 {VOICE_LABELS[preferences.voice] || preferences.voice}
               </p>
             </div>
@@ -147,19 +147,19 @@ export default function ConfirmacionPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
             onClick={() => router.push("/podcast")}
-            className="rounded-full bg-stone-900 px-6 py-3 font-medium text-white transition-opacity hover:opacity-90 cursor-pointer"
+            className="rounded-full bg-forest px-6 py-3 font-medium text-white transition-all duration-300 hover:bg-forest-light cursor-pointer"
           >
             🎙️ Generar mi primer podcast
           </button>
           <button
             onClick={() => router.push("/onboarding")}
-            className="rounded-full border border-stone-300 px-6 py-3 font-medium text-stone-700 transition-colors hover:border-stone-400 hover:text-stone-900 cursor-pointer"
+            className="rounded-full border border-white/40 px-6 py-3 font-medium text-dark/80 transition-all duration-300 hover:border-forest/30 hover:text-forest cursor-pointer"
           >
             Modificar preferencias
           </button>
         </div>
 
-        <p className="text-xs text-stone-400">
+        <p className="text-xs text-muted-light">
           Tus preferencias se han guardado localmente. En futuras versiones se sincronizarán con tu cuenta.
         </p>
       </div>

@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { generateAudio } from "@/lib/elevenlabs";
 import { createClient } from "@/lib/supabase/server";
 import { createLogger } from "@/lib/logger";
+import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 
 const log = createLogger("api/generate-audio");
 
@@ -17,6 +18,20 @@ interface GenerateAudioRequest {
 }
 
 export async function POST(request: Request) {
+  // Rate limiting: 5 peticiones por IP cada 60 segundos
+  const ip = getClientIP(request);
+  const { allowed, remaining } = await checkRateLimit(`generate-audio:${ip}`, {
+    maxRequests: 5,
+    windowSeconds: 60,
+  });
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Espera un momento antes de reintentar." },
+      { status: 429, headers: { "Retry-After": "60", "X-RateLimit-Remaining": "0" } }
+    );
+  }
+
   try {
     const body: GenerateAudioRequest = await request.json();
     const { script, episodeId, voice } = body;
@@ -80,6 +95,7 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "audio/mpeg",
         "Content-Length": String(audioBuffer.length),
+        "X-RateLimit-Remaining": String(remaining),
       },
     });
   } catch (error) {

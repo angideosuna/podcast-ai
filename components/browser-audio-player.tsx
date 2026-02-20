@@ -6,23 +6,19 @@ import { cleanScriptForTTS } from "@/lib/tts-utils";
 
 interface BrowserAudioPlayerProps {
   script: string;
-  voice: string; // "male" | "female"
+  voice: string;
+  episodeId?: string;
 }
 
-// Busca la mejor voz en español de España según el género
 function findSpanishVoice(gender: string): SpeechSynthesisVoice | null {
   const voices = speechSynthesis.getVoices();
-
-  // Buscar voces en español de España (es-ES)
   const spanishEsVoices = voices.filter((v) => v.lang === "es-ES");
 
   if (spanishEsVoices.length === 0) {
-    // Fallback: cualquier voz en español
     const anySpanish = voices.filter((v) => v.lang.startsWith("es"));
     return anySpanish[0] || null;
   }
 
-  // En Windows: "Microsoft Helena" = femenina, "Microsoft Pablo" = masculina
   if (gender === "male") {
     const male = spanishEsVoices.find(
       (v) =>
@@ -42,14 +38,15 @@ function findSpanishVoice(gender: string): SpeechSynthesisVoice | null {
   return female || spanishEsVoices[0];
 }
 
-export function BrowserAudioPlayer({ script, voice }: BrowserAudioPlayerProps) {
+export function BrowserAudioPlayer({ script, voice, episodeId }: BrowserAudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [voiceName, setVoiceName] = useState<string>("");
   const [voicesLoaded, setVoicesLoaded] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const listenStartRef = useRef<number>(0);
+  const totalListenRef = useRef<number>(0);
 
-  // Cargar voces del navegador
   useEffect(() => {
     function loadVoices() {
       const voices = speechSynthesis.getVoices();
@@ -67,15 +64,32 @@ export function BrowserAudioPlayer({ script, voice }: BrowserAudioPlayerProps) {
     };
   }, [voice]);
 
+  const sendMetrics = useCallback((completionRate: number) => {
+    if (!episodeId) return;
+    const elapsed = listenStartRef.current > 0 ? (Date.now() - listenStartRef.current) / 1000 : 0;
+    totalListenRef.current += elapsed;
+    listenStartRef.current = 0;
+    fetch("/api/metrics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        episode_id: episodeId,
+        total_listen_time_seconds: Math.round(totalListenRef.current),
+        completion_rate: Math.round(completionRate * 100) / 100,
+        playback_speed: 1.0,
+      }),
+    }).catch(() => {});
+  }, [episodeId]);
+
   const handlePlay = useCallback(() => {
     if (isPaused) {
       speechSynthesis.resume();
       setIsPlaying(true);
       setIsPaused(false);
+      listenStartRef.current = Date.now();
       return;
     }
 
-    // Cancelar cualquier reproducción anterior
     speechSynthesis.cancel();
 
     const cleanedText = cleanScriptForTTS(script);
@@ -94,6 +108,7 @@ export function BrowserAudioPlayer({ script, voice }: BrowserAudioPlayerProps) {
     utterance.onend = () => {
       setIsPlaying(false);
       setIsPaused(false);
+      sendMetrics(1.0);
     };
 
     utterance.onerror = () => {
@@ -104,21 +119,23 @@ export function BrowserAudioPlayer({ script, voice }: BrowserAudioPlayerProps) {
     speechSynthesis.speak(utterance);
     setIsPlaying(true);
     setIsPaused(false);
-  }, [script, voice, isPaused]);
+    listenStartRef.current = Date.now();
+  }, [script, voice, isPaused, sendMetrics]);
 
   const handlePause = useCallback(() => {
     speechSynthesis.pause();
     setIsPlaying(false);
     setIsPaused(true);
-  }, []);
+    sendMetrics(0.5); // estimate ~50% when pausing
+  }, [sendMetrics]);
 
   const handleStop = useCallback(() => {
     speechSynthesis.cancel();
     setIsPlaying(false);
     setIsPaused(false);
-  }, []);
+    sendMetrics(0);
+  }, [sendMetrics]);
 
-  // Limpiar al desmontar
   useEffect(() => {
     return () => {
       speechSynthesis.cancel();
@@ -128,45 +145,42 @@ export function BrowserAudioPlayer({ script, voice }: BrowserAudioPlayerProps) {
   if (!voicesLoaded) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-900/95 backdrop-blur-md">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-cream-light/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-3">
-        {/* Play/Pause */}
         {isPlaying ? (
           <button
             onClick={handlePause}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white text-slate-900 transition-transform hover:scale-105"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-forest text-white transition-transform duration-300 hover:scale-105"
           >
             <Pause className="h-5 w-5" />
           </button>
         ) : (
           <button
             onClick={handlePlay}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white text-slate-900 transition-transform hover:scale-105"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-forest text-white transition-transform duration-300 hover:scale-105"
           >
             <Play className="ml-0.5 h-5 w-5" />
           </button>
         )}
 
-        {/* Stop */}
         {(isPlaying || isPaused) && (
           <button
             onClick={handleStop}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-800 text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-cream-dark/50 text-dark/70 transition-all duration-300 hover:bg-forest/10 hover:text-forest"
           >
             <Square className="h-4 w-4" />
           </button>
         )}
 
-        {/* Info */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium text-white">
+          <span className="truncate text-sm font-medium text-dark">
             {isPlaying
               ? "Reproduciendo..."
               : isPaused
                 ? "En pausa"
                 : "Pulsa play para escuchar"}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted">
             <Volume2 className="mr-1 inline h-3 w-3" />
             {voiceName} (es-ES)
           </span>

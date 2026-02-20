@@ -26,6 +26,8 @@ export interface Episode {
   audio_url: string | null;
   articles: Article[];
   adjustments: string | null;
+  is_shared: boolean;
+  shared_at: string | null;
   created_at: string;
 }
 
@@ -61,6 +63,8 @@ export interface Profile {
   nivel_conocimiento: string | null;
   objetivo_podcast: string | null;
   horario_escucha: string | null;
+  periodicidad: string | null;
+  dias_personalizados: string[] | null;
   survey_completed: boolean;
   email?: string;
 }
@@ -98,9 +102,8 @@ export const OBJETIVO_PODCAST_LABELS: Record<string, string> = {
   entretenerme: "Entretenerme",
 };
 
-export const HORARIO_ESCUCHA_LABELS: Record<string, string> = {
-  manana: "Mañana",
-  mediodia: "Mediodía",
-  tarde: "Tarde",
-  noche: "Noche",
+export const PERIODICIDAD_LABELS: Record<string, string> = {
+  "todos-los-dias": "Todos los días",
+  "lunes-a-viernes": "Lunes a Viernes",
+  personalizado: "Personalizado",
 };
