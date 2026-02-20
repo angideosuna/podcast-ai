@@ -10,12 +10,6 @@ import { TonePicker } from "@/components/tone-picker";
 import { VoicePicker } from "@/components/voice-picker";
 import { OptionPicker } from "@/components/option-picker";
 
-const NIVEL_OPTIONS = [
-  { value: "principiante", label: "Principiante", emoji: "🌱", descripcion: "Estoy empezando en estos temas" },
-  { value: "intermedio", label: "Intermedio", emoji: "📚", descripcion: "Tengo conocimientos básicos" },
-  { value: "experto", label: "Experto", emoji: "🎓", descripcion: "Domino los temas en profundidad" },
-];
-
 const OBJETIVO_OPTIONS = [
   { value: "informarme", label: "Informarme", emoji: "📰", descripcion: "Estar al día con lo esencial" },
   { value: "aprender", label: "Aprender", emoji: "🧠", descripcion: "Profundizar y entender en detalle" },
@@ -42,7 +36,6 @@ function OnboardingContent() {
   const [ciudad, setCiudad] = useState("");
   const [rol, setRol] = useState("");
   const [sector, setSector] = useState("");
-  const [nivelConocimiento, setNivelConocimiento] = useState<string | null>(null);
   const [objetivoPodcast, setObjetivoPodcast] = useState<string | null>(null);
   const [horarioEscucha, setHorarioEscucha] = useState<string | null>(null);
   const [surveyLoaded, setSurveyLoaded] = useState(false);
@@ -71,7 +64,6 @@ function OnboardingContent() {
           if (p.ciudad) setCiudad(p.ciudad);
           if (p.rol) setRol(p.rol);
           if (p.sector) setSector(p.sector);
-          if (p.nivel_conocimiento) setNivelConocimiento(p.nivel_conocimiento);
           if (p.objetivo_podcast) setObjetivoPodcast(p.objetivo_podcast);
           if (p.horario_escucha) setHorarioEscucha(p.horario_escucha);
         }
@@ -131,7 +123,6 @@ function OnboardingContent() {
   // Validaciones
   const canGoToStep2 =
     nombre.trim() !== "" &&
-    nivelConocimiento !== null &&
     objetivoPodcast !== null &&
     horarioEscucha !== null;
   const canGoToStep3 = totalSelected >= 1;
@@ -149,7 +140,6 @@ function OnboardingContent() {
           ciudad: ciudad || null,
           rol: rol || null,
           sector: sector || null,
-          nivel_conocimiento: nivelConocimiento,
           objetivo_podcast: objetivoPodcast,
           horario_escucha: horarioEscucha,
           survey_completed: true,
@@ -299,14 +289,6 @@ function OnboardingContent() {
             </div>
 
             {/* Pickers */}
-            <OptionPicker
-              title="Nivel de conocimiento *"
-              options={NIVEL_OPTIONS}
-              selected={nivelConocimiento}
-              onSelect={setNivelConocimiento}
-              columns={3}
-            />
-
             <OptionPicker
               title="Objetivo del podcast *"
               options={OBJETIVO_OPTIONS}
