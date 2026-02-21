@@ -3,6 +3,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Article } from "@/lib/types";
 import { createLogger } from "@/lib/logger";
+import { withRetry } from "@/lib/retry";
 
 const log = createLogger("generate-script");
 
@@ -312,39 +313,43 @@ Escribe en Markdown:
 
   const maxTokens = MAX_TOKENS_BY_DURATION[duration] || 8192;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
+  const message = await withRetry(
+    async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
 
-  let message;
-  try {
-    message = await client.messages.create(
-      {
-        model: "claude-sonnet-4-20250514",
-        max_tokens: maxTokens,
-        system: [
+      try {
+        return await client.messages.create(
           {
-            type: "text",
-            text: SYSTEM_PROMPT,
-            cache_control: { type: "ephemeral" },
+            model: "claude-sonnet-4-20250514",
+            max_tokens: maxTokens,
+            system: [
+              {
+                type: "text",
+                text: SYSTEM_PROMPT,
+                cache_control: { type: "ephemeral" },
+              },
+            ],
+            messages: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
           },
-        ],
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      },
-      { signal: controller.signal }
-    );
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new Error("La generación del guion ha excedido el tiempo límite (55s). Intenta con una duración más corta.");
-    }
-    throw err;
-  } finally {
-    clearTimeout(timeout);
-  }
+          { signal: controller.signal }
+        );
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          throw new Error("La generación del guion ha excedido el tiempo límite (55s). Intenta con una duración más corta.");
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+    { maxRetries: 2, baseDelayMs: 2000, maxDelayMs: 8000, label: "claude-generate-script" }
+  );
 
   // Extraer el texto de la respuesta
   const textBlock = message.content.find((block) => block.type === "text");

@@ -23,6 +23,27 @@ vi.mock("@/lib/logger", () => ({
   }),
 }));
 
+// Mock retry to avoid real delays but preserve retry behavior
+vi.mock("@/lib/retry", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/retry")>("@/lib/retry");
+  return {
+    ...actual,
+    withRetry: async (fn: () => Promise<unknown>, options?: { maxRetries?: number }) => {
+      const maxRetries = options?.maxRetries ?? 3;
+      let lastError: unknown;
+      for (let i = 0; i <= maxRetries; i++) {
+        try {
+          return await fn();
+        } catch (err) {
+          lastError = err;
+          if (i === maxRetries || !actual.isTransientError(err)) throw err;
+        }
+      }
+      throw lastError;
+    },
+  };
+});
+
 // Set env var before import
 process.env.ANTHROPIC_API_KEY = "test-key";
 
@@ -133,5 +154,51 @@ describe("generateScript", () => {
 
     const callArgs = mockCreate.mock.calls[0][0];
     expect(callArgs.max_tokens).toBe(16384);
+  });
+
+  it("includes adjustments in the prompt when provided", async () => {
+    const articles = makeArticles(5);
+
+    await generateScript(articles, 15, "casual", "Habla mas sobre IA");
+
+    const callArgs = mockCreate.mock.calls[0][0];
+    const userContent = callArgs.messages[0].content;
+    expect(userContent).toContain("AJUSTES DEL USUARIO");
+    expect(userContent).toContain("Habla mas sobre IA");
+  });
+
+  it("retries on transient error and succeeds", async () => {
+    const articles = makeArticles(5);
+
+    mockCreate
+      .mockRejectedValueOnce(new Error("fetch failed"))
+      .mockResolvedValueOnce({
+        content: [{ type: "text", text: "Recovered script" }],
+      });
+
+    const result = await generateScript(articles, 15, "casual");
+    expect(result).toBe("Recovered script");
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry on non-transient error (e.g. 401)", async () => {
+    const articles = makeArticles(5);
+
+    mockCreate.mockRejectedValue(new Error("Error 401: unauthorized"));
+
+    await expect(generateScript(articles, 15, "casual")).rejects.toThrow("401");
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws when Claude returns no text block", async () => {
+    const articles = makeArticles(5);
+
+    mockCreate.mockResolvedValue({
+      content: [{ type: "tool_use", id: "123" }],
+    });
+
+    await expect(generateScript(articles, 15, "casual")).rejects.toThrow(
+      "No se recibió texto"
+    );
   });
 });

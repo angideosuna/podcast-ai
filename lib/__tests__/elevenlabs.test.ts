@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock logger
 vi.mock("@/lib/logger", () => ({
@@ -14,6 +14,27 @@ vi.mock("@/lib/tts-utils", () => ({
   cleanScriptForTTS: (s: string) => s,
   preprocessForTTS: (s: string) => s,
 }));
+
+// Mock retry to avoid real delays but preserve retry behavior
+vi.mock("@/lib/retry", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/retry")>("@/lib/retry");
+  return {
+    ...actual,
+    withRetry: async (fn: () => Promise<unknown>, options?: { maxRetries?: number }) => {
+      const maxRetries = options?.maxRetries ?? 3;
+      let lastError: unknown;
+      for (let i = 0; i <= maxRetries; i++) {
+        try {
+          return await fn();
+        } catch (err) {
+          lastError = err;
+          if (i === maxRetries || !actual.isTransientError(err)) throw err;
+        }
+      }
+      throw lastError;
+    },
+  };
+});
 
 // Set env before import
 process.env.ELEVENLABS_API_KEY = "test-elevenlabs-key";
@@ -115,6 +136,44 @@ describe("elevenlabs", () => {
 
       const fetchUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(fetchUrl).toContain("onwK4e9ZLuTAKqWW03F9"); // Daniel
+    });
+  });
+
+  describe("retry on transient errors", () => {
+    beforeEach(() => {
+      vi.mocked(globalThis.fetch).mockClear();
+    });
+
+    it("retries on network failure and succeeds", async () => {
+      vi.mocked(globalThis.fetch)
+        .mockRejectedValueOnce(new Error("fetch failed"))
+        .mockResolvedValue({
+          ok: true,
+          arrayBuffer: () => Promise.resolve(mockAudioBuffer),
+        } as Response);
+
+      const result = await generateAudio("Short text", "female");
+      expect(result).toBeInstanceOf(Buffer);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("throws after exhausting retries", async () => {
+      vi.mocked(globalThis.fetch).mockRejectedValue(new Error("fetch failed"));
+
+      await expect(generateAudio("Short text", "female")).rejects.toThrow("fetch failed");
+      // 1 initial + 2 retries = 3 calls
+      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("does not retry on non-transient API errors (e.g. 401)", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ detail: { message: "Unauthorized API key" } }),
+      } as Response);
+
+      await expect(generateAudio("Short text", "female")).rejects.toThrow("Unauthorized");
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     });
   });
 });

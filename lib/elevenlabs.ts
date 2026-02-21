@@ -2,6 +2,7 @@
 
 import { cleanScriptForTTS, preprocessForTTS } from "@/lib/tts-utils";
 import { createLogger } from "@/lib/logger";
+import { withRetry } from "@/lib/retry";
 
 const log = createLogger("elevenlabs");
 const ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech";
@@ -199,10 +200,9 @@ export async function generateAudio(script: string, voice?: string): Promise<Buf
 
   // Si el texto cabe en una sola petición, generar directamente
   if (cleanedScript.length <= MAX_CHARS_PER_REQUEST) {
-    const audioBuffer = await generateChunkAudio(
-      cleanedScript,
-      apiKey,
-      voiceId
+    const audioBuffer = await withRetry(
+      () => generateChunkAudio(cleanedScript, apiKey, voiceId),
+      { maxRetries: 2, baseDelayMs: 1500, maxDelayMs: 6000, label: "elevenlabs-single" }
     );
     return Buffer.from(audioBuffer);
   }
@@ -215,7 +215,10 @@ export async function generateAudio(script: string, voice?: string): Promise<Buf
   const silenceBuffer = generateSilenceBuffer();
 
   for (let i = 0; i < chunks.length; i++) {
-    const buffer = await generateChunkAudio(chunks[i], apiKey, voiceId);
+    const buffer = await withRetry(
+      () => generateChunkAudio(chunks[i], apiKey, voiceId),
+      { maxRetries: 2, baseDelayMs: 1500, maxDelayMs: 6000, label: `elevenlabs-chunk-${i + 1}` }
+    );
     const data = new Uint8Array(buffer);
 
     if (i === 0) {
