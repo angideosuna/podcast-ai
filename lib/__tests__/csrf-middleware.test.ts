@@ -1,153 +1,90 @@
 import { describe, it, expect } from "vitest";
-import { middleware } from "@/middleware";
-import { NextRequest } from "next/server";
+import { shouldBlockRequest, isAllowedOrigin } from "@/lib/csrf";
 
-function makeRequest(
-  url: string,
-  method: string,
-  origin?: string
-): NextRequest {
-  const headers = new Headers();
-  if (origin) headers.set("origin", origin);
-  return new NextRequest(new URL(url, "https://podcast.example.com"), {
-    method,
-    headers,
+describe("isAllowedOrigin", () => {
+  it("allows same host", () => {
+    expect(isAllowedOrigin("podcast.example.com", "https://podcast.example.com")).toBe(true);
   });
-}
 
-describe("CSRF middleware", () => {
+  it("allows null origin (server-to-server)", () => {
+    expect(isAllowedOrigin("podcast.example.com", null)).toBe(true);
+  });
+
+  it("blocks different host", () => {
+    expect(isAllowedOrigin("podcast.example.com", "https://evil.com")).toBe(false);
+  });
+
+  it("blocks malformed origin", () => {
+    expect(isAllowedOrigin("podcast.example.com", "not-a-valid-url")).toBe(false);
+  });
+
+  it("blocks subdomain mismatch", () => {
+    expect(isAllowedOrigin("podcast.example.com", "https://evil.podcast.example.com")).toBe(false);
+  });
+
+  it("allows same localhost with port", () => {
+    expect(isAllowedOrigin("localhost:3000", "http://localhost:3000")).toBe(true);
+  });
+
+  it("blocks different port on localhost", () => {
+    expect(isAllowedOrigin("localhost:3000", "http://localhost:4000")).toBe(false);
+  });
+});
+
+describe("shouldBlockRequest", () => {
+  const host = "podcast.example.com";
+  const sameOrigin = "https://podcast.example.com";
+  const crossOrigin = "https://evil.com";
+
   describe("allows legitimate requests", () => {
-    it("allows same-origin POST", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/generate-podcast",
-        "POST",
-        "https://podcast.example.com"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(200);
+    it("allows same-origin POST to /api/", () => {
+      expect(shouldBlockRequest("/api/generate-podcast", "POST", host, sameOrigin)).toBe(false);
     });
 
-    it("allows POST without Origin header (server-to-server)", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/generate-podcast",
-        "POST"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(200);
+    it("allows POST without Origin header", () => {
+      expect(shouldBlockRequest("/api/generate-podcast", "POST", host, null)).toBe(false);
     });
 
-    it("allows GET requests regardless of origin", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/trending",
-        "GET",
-        "https://evil.com"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(200);
+    it("allows GET regardless of origin", () => {
+      expect(shouldBlockRequest("/api/trending", "GET", host, crossOrigin)).toBe(false);
     });
 
     it("allows same-origin PUT", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/preferences",
-        "PUT",
-        "https://podcast.example.com"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(200);
+      expect(shouldBlockRequest("/api/preferences", "PUT", host, sameOrigin)).toBe(false);
     });
 
     it("allows same-origin DELETE", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/share",
-        "DELETE",
-        "https://podcast.example.com"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(200);
+      expect(shouldBlockRequest("/api/share", "DELETE", host, sameOrigin)).toBe(false);
+    });
+
+    it("does not block non-API paths", () => {
+      expect(shouldBlockRequest("/login", "POST", host, crossOrigin)).toBe(false);
     });
   });
 
   describe("blocks cross-origin mutating requests", () => {
-    it("blocks POST from different origin", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/generate-podcast",
-        "POST",
-        "https://evil.com"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(403);
+    it("blocks cross-origin POST", () => {
+      expect(shouldBlockRequest("/api/generate-podcast", "POST", host, crossOrigin)).toBe(true);
     });
 
-    it("blocks PUT from different origin", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/preferences",
-        "PUT",
-        "https://attacker.io"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(403);
+    it("blocks cross-origin PUT", () => {
+      expect(shouldBlockRequest("/api/preferences", "PUT", host, "https://attacker.io")).toBe(true);
     });
 
-    it("blocks PATCH from different origin", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/profile",
-        "PATCH",
-        "https://phishing.net"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(403);
+    it("blocks cross-origin PATCH", () => {
+      expect(shouldBlockRequest("/api/profile", "PATCH", host, "https://phishing.net")).toBe(true);
     });
 
-    it("blocks DELETE from different origin", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/share",
-        "DELETE",
-        "https://malicious.org"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(403);
+    it("blocks cross-origin DELETE", () => {
+      expect(shouldBlockRequest("/api/share", "DELETE", host, "https://malicious.org")).toBe(true);
     });
 
-    it("blocks POST with malformed Origin header", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/feedback",
-        "POST",
-        "not-a-valid-url"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(403);
+    it("blocks malformed Origin on POST", () => {
+      expect(shouldBlockRequest("/api/feedback", "POST", host, "not-a-valid-url")).toBe(true);
     });
 
-    it("blocks subdomain origin mismatch", () => {
-      const req = makeRequest(
-        "https://podcast.example.com/api/generate-podcast",
-        "POST",
-        "https://evil.podcast.example.com"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(403);
-    });
-  });
-
-  describe("localhost development", () => {
-    it("allows same localhost origin", () => {
-      const req = makeRequest(
-        "http://localhost:3000/api/generate-podcast",
-        "POST",
-        "http://localhost:3000"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(200);
-    });
-
-    it("blocks different port on localhost", () => {
-      const req = makeRequest(
-        "http://localhost:3000/api/generate-podcast",
-        "POST",
-        "http://localhost:4000"
-      );
-      const res = middleware(req);
-      expect(res.status).toBe(403);
+    it("blocks subdomain mismatch on POST", () => {
+      expect(shouldBlockRequest("/api/generate-podcast", "POST", host, "https://evil.podcast.example.com")).toBe(true);
     });
   });
 });

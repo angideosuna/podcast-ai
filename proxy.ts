@@ -1,9 +1,23 @@
-// Proxy de Next.js: refresca la sesión de Supabase y protege rutas
+// Proxy de Next.js: refresca la sesión de Supabase, protege rutas y valida CSRF
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { shouldBlockRequest } from "@/lib/csrf";
 
 export async function proxy(request: NextRequest) {
+  // CSRF check on mutating API requests
+  if (shouldBlockRequest(
+    request.nextUrl.pathname,
+    request.method,
+    request.nextUrl.host,
+    request.headers.get("origin")
+  )) {
+    return NextResponse.json(
+      { error: "Forbidden: cross-origin request blocked" },
+      { status: 403 }
+    );
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
