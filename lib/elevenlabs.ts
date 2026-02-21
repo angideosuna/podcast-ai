@@ -104,11 +104,13 @@ async function generateChunkAudio(
   return response.arrayBuffer();
 }
 
+// ── Funciones auxiliares de MP3 (exportadas para testing) ─────────────────
+
 /**
  * Calcula el tamaño de un tag ID3v2 si existe al inicio del buffer.
  * Devuelve el número de bytes a saltar, o 0 si no hay tag.
  */
-function getID3v2Size(data: Uint8Array): number {
+export function getID3v2Size(data: Uint8Array): number {
   // ID3v2 header: "ID3" (3 bytes) + version (2 bytes) + flags (1 byte) + size (4 bytes syncsafe)
   if (data.length < 10) return 0;
   if (data[0] !== 0x49 || data[1] !== 0x44 || data[2] !== 0x33) return 0; // "ID3"
@@ -124,33 +126,69 @@ function getID3v2Size(data: Uint8Array): number {
 }
 
 /**
- * Busca el primer frame sync MP3 en el buffer.
- * Frame sync = 0xFF seguido de un byte con los 3 bits altos en 1 (0xE0 mask).
- * Devuelve el offset del primer frame, o 0 si no se encuentra.
+ * Comprueba si los bytes en la posición dada son un frame sync MP3 válido.
+ * Frame sync = 11 bits en 1 (0xFF + upper 3 bits of next byte = 0xE0).
+ * Además valida que los campos de bitrate y sample rate no sean inválidos (0xF).
  */
-function findFirstFrameSync(data: Uint8Array): number {
-  for (let i = 0; i < data.length - 1; i++) {
-    if (data[i] === 0xff && (data[i + 1] & 0xe0) === 0xe0) {
+export function isValidFrameSync(data: Uint8Array, offset: number): boolean {
+  if (offset + 3 >= data.length) return false;
+  if (data[offset] !== 0xff || (data[offset + 1] & 0xe0) !== 0xe0) return false;
+
+  // Extraer bitrate index (bits 7-4 del byte 2) y sample rate index (bits 3-2)
+  const bitrateIndex = (data[offset + 2] >> 4) & 0x0f;
+  const sampleRateIndex = (data[offset + 2] >> 2) & 0x03;
+
+  // 0xF = "bad" para ambos campos según la spec MPEG
+  if (bitrateIndex === 0x0f || sampleRateIndex === 0x03) return false;
+
+  return true;
+}
+
+/**
+ * Busca el primer frame sync MP3 válido en el buffer.
+ * Devuelve el offset del primer frame, o -1 si no se encuentra.
+ */
+export function findFirstFrameSync(data: Uint8Array): number {
+  for (let i = 0; i < data.length - 3; i++) {
+    if (isValidFrameSync(data, i)) {
       return i;
     }
   }
-  return 0;
+  return -1;
 }
 
 /**
  * Elimina el header ID3v2 de un buffer MP3 para evitar glitches al concatenar.
  * Para el primer chunk se mantiene todo intacto.
  */
-function stripMP3Header(data: Uint8Array): Uint8Array {
+function stripMP3Header(data: Uint8Array, chunkIndex?: number): Uint8Array {
+  const label = chunkIndex !== undefined ? `chunk ${chunkIndex}` : "chunk";
+
   const id3Size = getID3v2Size(data);
   if (id3Size > 0 && id3Size < data.length) {
-    return data.subarray(id3Size);
+    const stripped = data.subarray(id3Size);
+    // Verificar que hay un frame sync válido después del ID3
+    if (!isValidFrameSync(stripped, 0)) {
+      const syncOffset = findFirstFrameSync(stripped);
+      if (syncOffset > 0) {
+        log.warn(`[${label}] Frame sync no inmediato tras ID3, saltando ${syncOffset} bytes extra`);
+        return stripped.subarray(syncOffset);
+      }
+      if (syncOffset === -1) {
+        log.warn(`[${label}] No se encontró frame sync válido tras eliminar ID3 (${data.length} bytes)`);
+      }
+    }
+    return stripped;
   }
 
   // Si no hay ID3, buscar el primer frame sync y empezar desde ahí
   const frameOffset = findFirstFrameSync(data);
   if (frameOffset > 0) {
+    log.warn(`[${label}] ${frameOffset} bytes basura antes del primer frame sync`);
     return data.subarray(frameOffset);
+  }
+  if (frameOffset === -1) {
+    log.warn(`[${label}] No se encontró frame sync válido en buffer de ${data.length} bytes`);
   }
 
   return data;
@@ -228,7 +266,7 @@ export async function generateAudio(script: string, voice?: string): Promise<Buf
       // Insertar silencio entre chunks para transición suave
       audioBuffers.push(silenceBuffer);
       // Chunks posteriores: eliminar ID3 header para evitar glitches
-      audioBuffers.push(stripMP3Header(data));
+      audioBuffers.push(stripMP3Header(data, i));
     }
   }
 
@@ -242,5 +280,16 @@ export async function generateAudio(script: string, voice?: string): Promise<Buf
     offset += buf.length;
   }
 
+  // Validar que el resultado empiece con un frame sync MP3 válido
+  if (!isValidFrameSync(combined, 0)) {
+    const firstSync = findFirstFrameSync(combined);
+    if (firstSync === -1) {
+      log.error(`Audio concatenado (${combined.length} bytes) no contiene frames MP3 válidos`);
+    } else if (firstSync > 0) {
+      log.warn(`Audio concatenado: primer frame sync en offset ${firstSync}, esperado en 0`);
+    }
+  }
+
+  log.info(`Audio concatenado: ${chunks.length} chunks, ${totalLength} bytes`);
   return Buffer.from(combined);
 }

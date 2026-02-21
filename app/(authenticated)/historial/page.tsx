@@ -138,32 +138,63 @@ function HistorialContent() {
         }
       }
 
-      // Build filtered query
-      let query = supabase
-        .from("episodes")
-        .select("id, title, topics, duration, tone, audio_url, created_at", {
-          count: "exact",
-        })
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // Full-text search: use RPC function when search is active (searches title + script)
+      // Falls back to ilike on title if the RPC is not available (migration not run yet)
+      let data: EpisodeSummary[] | null = null;
+      let count: number | null = null;
 
-      if (filters.topics.length > 0) {
-        query = query.overlaps("topics", filters.topics);
-      }
-      if (filters.tone) {
-        query = query.eq("tone", filters.tone);
-      }
-      const dateThreshold = getDateThreshold(filters.date);
-      if (dateThreshold) {
-        query = query.gte("created_at", dateThreshold);
-      }
       if (filters.search) {
-        query = query.ilike("title", `%${filters.search}%`);
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc(
+            "search_episodes",
+            {
+              p_user_id: user.id,
+              p_query: filters.search,
+              p_limit: PAGE_SIZE,
+              p_offset: offset,
+            }
+          );
+
+          if (!rpcError && rpcData) {
+            data = rpcData as EpisodeSummary[];
+            count = rpcData.length < PAGE_SIZE ? offset + rpcData.length : null;
+          }
+        } catch {
+          // RPC not available — fall through to ilike fallback
+        }
       }
 
-      query = query.range(offset, offset + PAGE_SIZE - 1);
+      // Standard query (no search, or search RPC unavailable)
+      if (data === null) {
+        let query = supabase
+          .from("episodes")
+          .select("id, title, topics, duration, tone, audio_url, created_at", {
+            count: "exact",
+          })
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
 
-      const { data, count } = await query;
+        if (filters.topics.length > 0) {
+          query = query.overlaps("topics", filters.topics);
+        }
+        if (filters.tone) {
+          query = query.eq("tone", filters.tone);
+        }
+        const dateThreshold = getDateThreshold(filters.date);
+        if (dateThreshold) {
+          query = query.gte("created_at", dateThreshold);
+        }
+        if (filters.search) {
+          // Fallback: search title only with ilike
+          query = query.ilike("title", `%${filters.search}%`);
+        }
+
+        query = query.range(offset, offset + PAGE_SIZE - 1);
+
+        const result = await query;
+        data = result.data;
+        count = result.count ?? null;
+      }
 
       if (offset === 0) {
         setTotalCount(count ?? 0);
@@ -232,7 +263,7 @@ function HistorialContent() {
               type="text"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Buscar por titulo..."
+              placeholder="Buscar en titulo y contenido..."
               className="glass-input w-full pl-9 text-sm"
             />
             {searchText && (
