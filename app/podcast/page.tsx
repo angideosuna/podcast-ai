@@ -90,6 +90,10 @@ function PodcastPageContent() {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          router.push("/login?redirect=/podcast");
+          return null;
+        }
         const data = await response.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error || "Error al generar el podcast");
       }
@@ -113,7 +117,7 @@ function PodcastPageContent() {
       setIsGenerating(false);
       abortControllerRef.current = null;
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     // Intentar cargar preferencias: Supabase primero, localStorage como fallback
