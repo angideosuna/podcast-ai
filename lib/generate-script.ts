@@ -340,7 +340,12 @@ Escribe en Markdown:
           { signal: controller.signal }
         );
       } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
+        const msg = err instanceof Error ? err.message : "";
+        if (
+          (err instanceof Error && err.name === "AbortError") ||
+          msg.includes("aborted") ||
+          msg.includes("abort")
+        ) {
           throw new Error("La generación del guion ha excedido el tiempo límite (55s). Intenta con una duración más corta.");
         }
         throw err;
