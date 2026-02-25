@@ -145,7 +145,7 @@ export const TOPIC_TO_CATEGORIES: Record<string, string[]> = {
   "salud-mental": ["health"],
   "desarrollo-personal": ["health"],
   // Sociedad y Cultura
-  "politica-actualidad": ["politics"],
+  "politica-actualidad": ["politics", "general"],
   historia: ["entertainment"],
   filosofia: ["entertainment"],
   educacion: ["science"],

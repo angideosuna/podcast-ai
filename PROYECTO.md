@@ -1,4 +1,4 @@
-# PodCast.ai
+# WaveCast
 
 > Genera podcasts diarios personalizados con noticias reales y voces AI.
 
@@ -23,18 +23,19 @@
 
 ## 1. Nombre y descripcion
 
-**Nombre:** PodCast.ai
+**Nombre:** WaveCast
 
 **En una frase:** Aplicacion web que genera podcasts diarios hiperpersonalizados con noticias reales del dia y voces AI.
 
 **Flujo completo:**
 
 1. Un **News Agent** autonomo recopila noticias de 9 fuentes (8 feeds RSS + NewsAPI.org) y las guarda en bruto en Supabase.
-2. El agente **deduplica** las noticias por similitud de titulo (>70% overlap de palabras) y las **clasifica con Claude** (categoria, relevancia 1-10, resumen, keywords).
-3. El usuario se registra, completa una **encuesta personal** (nombre, nivel de conocimiento, objetivo, horario) y configura sus **preferencias** (temas, duracion, tono, voz).
-4. Al generar un podcast, la app consulta las noticias clasificadas del agente (o GNews como fallback), y **Claude genera un guion** en formato storytelling adaptado al perfil del oyente.
+2. El agente **deduplica** las noticias por similitud de titulo/descripcion con stopwords y las **clasifica con Claude** (categoria, relevancia 1-10, resumen, keywords, sentiment, impact_scope, story_id).
+3. El usuario se registra, completa una **encuesta personal** (nombre, nivel de conocimiento, objetivo, horario) y configura sus **preferencias** (temas, duracion, tono, voz, horario de generacion).
+4. Al generar un podcast, la app consulta las noticias clasificadas del agente (o GNews como fallback), obtiene **insights del historial de feedback** del usuario, y **Claude genera un guion** en formato storytelling adaptado al perfil del oyente.
 5. El guion se puede escuchar con **Web Speech API** (gratis, navegador) o convertir a audio con **ElevenLabs** (voz profesional).
-6. Los episodios se guardan en Supabase y el usuario puede consultarlos en su **historial**.
+6. Los episodios se guardan en Supabase y el usuario puede consultarlos en su **historial** con filtros y busqueda full-text.
+7. **Cron jobs automatizados** (Vercel) ejecutan fetch, procesamiento, generacion programada, limpieza y digest semanal.
 
 ---
 
@@ -67,39 +68,62 @@
 ```
 podcast-ai/
 ├── app/                              # Next.js App Router
-│   ├── layout.tsx                    # Layout raiz (Inter font, bg-stone-100)
-│   ├── page.tsx                      # Redirect / → /onboarding
-│   ├── globals.css                   # Tailwind + shadcn theme (oklch stone)
+│   ├── layout.tsx                    # Layout raiz (Inter + Montserrat, bg negro)
+│   ├── page.tsx                      # Landing page publica (redirect a /dashboard si logueado)
+│   ├── globals.css                   # Tailwind + paleta Spotify (negro + verde)
+│   ├── manifest.ts                   # PWA manifest (WaveCast)
 │   ├── error.tsx                     # Error boundary global
 │   ├── not-found.tsx                 # Pagina 404
 │   ├── login/page.tsx                # Login con email/password
 │   ├── signup/page.tsx               # Registro con confirmacion por email
-│   ├── perfil/page.tsx               # Editar perfil del usuario
 │   ├── onboarding/
-│   │   ├── page.tsx                  # Onboarding 3 pasos (encuesta + temas + config)
-│   │   └── confirmacion/page.tsx     # Confirmacion de preferencias → genera podcast
-│   ├── podcast/page.tsx              # Pagina principal de generacion de podcast
+│   │   └── page.tsx                  # Onboarding 2 pasos (temas + config)
+│   ├── podcast/page.tsx              # Redirect a /dashboard (legacy)
 │   ├── auth/callback/route.ts        # Callback de confirmacion de email
+│   ├── shared/[id]/page.tsx          # Pagina publica de episodios compartidos
 │   ├── api/
 │   │   ├── generate-podcast/route.ts # POST: genera guion con Claude
 │   │   ├── generate-audio/route.ts   # POST: genera audio con ElevenLabs
 │   │   ├── preferences/route.ts      # GET/POST: preferencias del usuario
-│   │   └── profile/route.ts          # GET/POST: perfil del usuario
+│   │   ├── profile/route.ts          # GET/POST: perfil del usuario
+│   │   ├── schedule/route.ts         # GET/POST: horario de generacion
+│   │   ├── feedback/route.ts         # POST: feedback de episodios (thumbs up/down + tags)
+│   │   ├── metrics/route.ts          # POST: metricas de escucha pasivas
+│   │   ├── trending/route.ts         # GET: temas trending del dia
+│   │   ├── clips/route.ts           # GET/POST: clips trending de 5 min (cache + thundering herd)
+│   │   ├── share/route.ts            # POST: compartir episodio publicamente
+│   │   ├── suggest-topics/route.ts   # GET: sugerencias de temas basadas en tendencias
+│   │   └── cron/                     # Cron jobs automatizados (Vercel)
+│   │       ├── fetch-news/route.ts   # Recopila noticias (diario 05:00 UTC)
+│   │       ├── process-news/route.ts # Procesa noticias con Claude (diario 05:30 UTC)
+│   │       ├── generate-scheduled/route.ts # Genera podcasts programados (diario 07:00 UTC)
+│   │       ├── cleanup/route.ts      # Limpia noticias antiguas (domingos 03:00 UTC)
+│   │       └── weekly-digest/route.ts # Genera digest semanal (domingos 10:00 UTC)
 │   └── (authenticated)/
 │       ├── layout.tsx                # Layout con NavHeader
-│       ├── dashboard/page.tsx        # Dashboard principal
-│       ├── historial/page.tsx        # Lista de episodios
-│       └── historial/[id]/page.tsx   # Detalle de un episodio
+│       └── dashboard/page.tsx        # Dashboard principal con 4 tabs
 ├── components/
 │   ├── nav-header.tsx                # Barra de navegacion (desktop + mobile)
-│   ├── topic-card.tsx                # Card de seleccion de tema
+│   ├── category-card.tsx             # Card de seleccion de categoria/tema
 │   ├── duration-picker.tsx           # Selector de duracion (5/15/30 min)
 │   ├── tone-picker.tsx               # Selector de tono (casual/profesional/deep-dive)
 │   ├── voice-picker.tsx              # Selector de voz (femenina/masculina)
 │   ├── option-picker.tsx             # Picker generico para encuesta
 │   ├── audio-player.tsx              # Reproductor de audio (ElevenLabs MP3)
 │   ├── browser-audio-player.tsx      # Reproductor Web Speech API (fallback)
+│   ├── clip-audio-player.tsx         # Reproductor inline para clips trending (sin metricas)
 │   ├── adjust-episode.tsx            # Dialog para ajustar/regenerar episodio
+│   ├── episode-feedback.tsx          # Feedback de episodio (thumbs up/down + tags + comentario)
+│   ├── otros-section.tsx             # Seccion "Otros" reutilizable
+│   ├── dashboard/                    # Componentes del dashboard (separados por tab)
+│   │   ├── hoy-tab.tsx               # Tab Hoy: generacion + episodio del dia + digest + stats
+│   │   ├── historial-tab.tsx         # Tab Historial: lista con filtros y busqueda full-text
+│   │   ├── descubrir-tab.tsx         # Tab Descubrir: clips trending + temas del dia
+│   │   └── perfil-tab.tsx            # Tab Mi Perfil: 4 secciones (perfil, preferencias, horario, cuenta) con guardado independiente
+│   ├── onboarding/                   # Componentes del onboarding (separados por paso)
+│   │   # step-survey.tsx y step-schedule.tsx eliminados en v17.3 (logica migrada a perfil-tab.tsx)
+│   │   ├── step-topics.tsx           # Paso 1: seleccion de temas
+│   │   └── step-config.tsx           # Paso 2: duracion + tono + voz + nombre
 │   └── ui/                           # Componentes shadcn/ui
 │       ├── avatar.tsx
 │       ├── badge.tsx
@@ -111,16 +135,23 @@ podcast-ai/
 │       └── skeleton.tsx
 ├── lib/
 │   ├── generate-script.ts            # Generacion de guiones con Claude + ARTICLES_BY_DURATION + timeout
+│   ├── generate-clip.ts              # Generacion de clips trending de 5 min (busca articulos + llama generateScript)
+│   ├── generate-podcast.ts           # Logica core de generacion (compartida entre ruta manual y cron)
 │   ├── elevenlabs.ts                 # TTS con ElevenLabs (chunking, voice selection)
 │   ├── tts-utils.ts                  # Limpieza de guion para TTS (regex Unicode emojis)
 │   ├── newsapi.ts                    # Cliente GNews API (fallback)
-│   ├── markdown.ts                   # Renderizado Markdown → HTML (tema claro, HTML sanitizado)
+│   ├── news-cache.ts                 # Cache en memoria con TTL para articulos (1 hora)
+│   ├── markdown.ts                   # Renderizado Markdown → HTML (tema oscuro, HTML sanitizado)
 │   ├── topics.ts                     # 8 temas + TOPICS_MAP + getTopicById() + TOPIC_TO_CATEGORIES
 │   ├── rate-limit.ts                 # Rate limiting en memoria para API routes
+│   ├── retry.ts                      # Retry con backoff exponencial (para APIs externas)
+│   ├── csrf.ts                       # Proteccion CSRF (valida Origin header en mutating requests)
+│   ├── user-insights.ts              # Insights del usuario basados en feedback y metricas
 │   ├── types.ts                      # Tipos centralizados (Article, Episode, Preferences, Profile)
 │   ├── logger.ts                     # Logger con contexto y colores
 │   ├── auth-utils.ts                 # Utilidad logout()
 │   ├── utils.ts                      # cn() para clases CSS (clsx + tailwind-merge)
+│   ├── __tests__/                    # Tests unitarios
 │   └── supabase/
 │       ├── client.ts                 # Supabase browser client (anon key)
 │       └── server.ts                 # Supabase server client (cookies, SSR)
@@ -141,7 +172,7 @@ podcast-ai/
 │           │   └── deduplicator.ts   # Dedup por similitud de titulo (>70%)
 │           ├── storage/
 │           │   ├── supabase.ts       # CRUD con service_role (batch upsert)
-│           │   └── get-articles.ts   # fetchFromAgent() — bridge agente → podcast
+│           │   └── get-articles.ts   # fetchFromAgent() — selección inteligente de artículos
 │           ├── scripts/
 │           │   ├── fetch.ts          # CLI: npm run agent:fetch
 │           │   ├── process.ts        # CLI: npm run agent:process
@@ -155,8 +186,15 @@ podcast-ai/
 │       ├── 001_initial_schema.sql    # profiles, preferences, episodes, storage
 │       ├── 002_add_voice_to_preferences.sql
 │       ├── 003_add_survey_fields.sql # edad, ciudad, nivel, objetivo, horario
-│       └── 004_news_agent_tables.sql # raw_news, processed_news, trending_topics, sources_health
-├── proxy.ts                          # Middleware: refresh sesion + proteger rutas
+│       ├── 004_news_agent_tables.sql # raw_news, processed_news, trending_topics, sources_health
+│       ├── 005_add_schedule_fields.sql # periodicidad, dias_personalizados en profiles
+│       ├── 006_schedules.sql         # Tabla schedules (generacion automatica)
+│       ├── 007_feedback_and_metrics.sql # episode_feedback + listening_metrics
+│       ├── 008_shared_episodes.sql   # Columnas is_shared, shared_at en episodes
+│       ├── 009_fulltext_search_episodes.sql # tsvector + GIN index + RPC search_episodes()
+│       └── 010_enhanced_classification.sql # sentiment, impact_scope, story_id en processed_news
+├── vercel.json                       # Configuracion de cron jobs (5 tareas programadas)
+├── proxy.ts                          # Middleware: sesion + rutas protegidas + CSRF + onboarding
 ├── package.json
 ├── tsconfig.json
 ├── next.config.ts                    # Permite imagenes de *.supabase.co
@@ -168,29 +206,37 @@ podcast-ai/
 ### 3.2 Flujo de datos
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    NEWS AGENT (CLI)                       │
-│                                                           │
-│  8 RSS feeds ──┐                                         │
-│                ├──→ raw_news (Supabase) ──→ dedup ──→ Claude clasifica ──→ processed_news │
-│  NewsAPI.org ──┘                                         │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    NEWS AGENT (CLI + Cron)                        │
+│                                                                    │
+│  8 RSS feeds ──┐                                                  │
+│                ├──→ raw_news (Supabase) ──→ dedup ──→ Claude ──→ processed_news
+│  NewsAPI.org ──┘                                                  │
+│                                                                    │
+│  Vercel Cron: fetch (05:00) → process (05:30) → cleanup (dom 03:00)
+└──────────────────────────────────────────────────────────────────┘
                          │
                          ▼
-┌─────────────────────────────────────────────────────────┐
-│                    WEB APP (Next.js)                      │
-│                                                           │
-│  Usuario ──→ Onboarding (encuesta + temas + config)      │
-│          ──→ POST /api/generate-podcast                  │
-│                 ├──→ fetchFromAgent(processed_news)       │
-│                 ├──→ fallback: GNews API                  │
-│                 ├──→ Claude genera guion personalizado     │
-│                 └──→ Guarda episodio en Supabase          │
-│          ──→ POST /api/generate-audio                    │
-│                 ├──→ ElevenLabs TTS                       │
-│                 └──→ Sube MP3 a Supabase Storage          │
-│          ──→ Escucha con Web Speech API (alternativa)     │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    WEB APP (Next.js)                               │
+│                                                                    │
+│  Usuario ──→ Onboarding (encuesta + horario + temas + config)    │
+│          ──→ POST /api/generate-podcast                          │
+│                 ├──→ fetchFromAgent(smart selection) + cache       │
+│                 ├──→ fallback: GNews API                          │
+│                 ├──→ getUserInsights() — feedback/metricas        │
+│                 ├──→ trending_topics (top 3 del dia)              │
+│                 ├──→ Claude genera guion personalizado             │
+│                 └──→ Guarda episodio en Supabase                  │
+│          ──→ POST /api/generate-audio                            │
+│                 ├──→ ElevenLabs TTS                               │
+│                 └──→ Sube MP3 a Supabase Storage                  │
+│          ──→ POST /api/feedback — thumbs up/down + tags           │
+│          ──→ POST /api/metrics — escucha pasiva                   │
+│          ──→ Escucha con Web Speech API (alternativa)             │
+│                                                                    │
+│  Cron: generate-scheduled (07:00) → weekly-digest (dom 10:00)    │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -212,6 +258,8 @@ podcast-ai/
 - El News Agent usa el **service_role key** para acceso directo a raw_news, processed_news y sources_health
 - Bucket `podcast-audio` es publico para lectura, cada usuario sube a su carpeta `{user_id}/`
 - Trigger `on_auth_user_created` crea automaticamente un perfil vacio al registrar usuario
+- Full-text search con `tsvector` (config 'spanish') + indice GIN en episodios
+- RPC `search_episodes()` para busqueda con ranking de relevancia
 
 ### 4.2 Anthropic (Claude) — Generacion de guiones y clasificacion
 
@@ -226,24 +274,33 @@ podcast-ai/
 
 **Uso en generacion de guiones (`lib/generate-script.ts`):**
 - System prompt con personalidad de podcaster (identidad, expresiones, reglas de oro)
-- Prompt con noticias, instrucciones de tono detalladas (con ejemplos DO/DON'T), variaciones aleatorias
+- Prompt con noticias (incluye sentiment, impact_scope, related_articles), instrucciones de tono, variaciones aleatorias
+- Bloques contextuales: trending topics, tono por noticia, conexiones, noticias relacionadas, noticia sorpresa
 - Si el usuario tiene perfil, inyecta bloque `PERFIL DEL OYENTE` (nombre, nivel, objetivo, horario)
+- Si hay suficiente feedback (>= 3), inyecta bloque `HISTORIAL DE PREFERENCIAS DEL OYENTE` (insights)
 - `max_tokens`: 4096 (podcast 5min), 8192 (15min), 12288 (30min) — dinamico segun duracion
 - `temperature`: 0.9
 - **Timeout**: 55 segundos (AbortController) para evitar bloqueos en Vercel
 - **Cliente singleton**: una sola instancia de Anthropic reutilizada entre peticiones
+- **Retry**: backoff exponencial con jitter via `lib/retry.ts` (3 reintentos, errores transitorios)
 
-**Sistema de prompts (v2):**
+**Sistema de prompts (v3):**
 
 | Componente | Descripcion |
 |-----------|-------------|
 | System prompt | Personalidad de podcaster: curioso, apasionado, cercano. Expresiones naturales del espanol de Espana. 15 frases prohibidas que suenan a IA. |
 | Tone instructions | Instrucciones detalladas por tono con ejemplos concretos de COMO SI y COMO NO debe sonar. |
-| Variabilidad | Pools aleatorios: 6 estilos de apertura, 5 de transicion, 5 de cierre. Cada episodio suena diferente. |
+| Variabilidad | Pools aleatorios: 6 estilos de apertura, 5 de transicion, 5 de cierre, 4 de sorpresa. Cada episodio suena diferente. |
+| Trending topics | Si hay trending del dia, se inyectan los 3 principales para que Claude los mencione naturalmente si coinciden con las noticias. |
+| Tono por noticia | Cada noticia incluye sentiment e impact_scope. Claude adapta energia (positive→entusiasmo, negative→empatia, global→impacto mundial). |
+| Conexiones | Instruccion explicita para conectar noticias relacionadas con transiciones naturales en vez de bloques independientes. |
+| Noticias relacionadas | Si hay articulos agrupados por story_id, se marcan con [RELACIONADAS] para narracion consolidada. |
+| Noticia sorpresa | Si el ultimo articulo es de categoria diferente a los temas del usuario, se sugiere una frase de transicion sorpresa. |
 | Estructura | Flexible, no rigida. Storytelling libre en vez de "Titular → Contexto → Opinion". |
 | Perfil del oyente | Bloque contextual inyectado despues de REGLAS INQUEBRANTABLES. Adapta nivel (principiante→explicar conceptos, experto→terminologia tecnica), objetivo (informar→resumen claro, entretener→contenido dinamico), y horario (manana→energia, noche→relajado). |
+| Insights del oyente | Bloque con historial de feedback: temas valorados positivamente/negativamente, tags mas comunes, tasa de escucha completa, velocidad habitual. Solo si hay >= 3 feedbacks. |
 
-**Constante compartida:** `ARTICLES_BY_DURATION` (exportada desde `generate-script.ts`) define cuantas noticias usar por duracion: `{5: 3, 15: 5, 30: 8}`. Se reutiliza en la API route.
+**Constante compartida:** `ARTICLES_BY_DURATION` (exportada desde `generate-script.ts`) define cuantas noticias usar por duracion: `{5: 3, 15: 5, 30: 8}`. Se reutiliza en la API route y en `generate-podcast.ts`.
 
 **Configuracion de tiempos:**
 
@@ -259,10 +316,11 @@ podcast-ai/
 - `deep-dive`: Experto apasionado tipo Jordi Wild. Contexto historico, conexiones inesperadas, analisis profundo. Con ejemplos DO/DON'T.
 
 **Uso en clasificacion (`src/agents/news-agent/processors/classifier.ts`):**
-- Batches de 10 articulos → Claude asigna categoria, relevancia 1-10, resumen, keywords
-- `max_tokens`: 2048 por batch
+- Batches de 10 articulos → Claude asigna: categoria, relevancia 1-10, resumen, keywords, sentiment, impact_scope, story_id
+- `max_tokens`: 3072 por batch
 - `temperature`: 0.3
 - 1 reintento con 3s de backoff si el batch falla
+- Validacion robusta: defaults para campos invalidos, truncado de story_id a 50 chars
 
 ### 4.3 ElevenLabs — Text-to-Speech
 
@@ -341,7 +399,7 @@ podcast-ai/
 
 | Campo | Valor |
 |-------|-------|
-| Para que se usa | Hosting de la app Next.js en produccion |
+| Para que se usa | Hosting de la app Next.js en produccion + cron jobs automatizados |
 | Dashboard | https://vercel.com |
 | API keys | Ninguna en codigo (se configura via dashboard) |
 | Tier | **Gratis** (hobby) |
@@ -357,7 +415,7 @@ podcast-ai/
 
 **Motor:** PostgreSQL alojado en Supabase (plan gratis).
 
-**Migraciones:** `supabase/migrations/001-004`
+**Migraciones:** `supabase/migrations/001-011`
 
 ### 5.1 Tabla `profiles`
 
@@ -375,6 +433,8 @@ Datos personales del usuario. Se crea automaticamente al registrarse (trigger `o
 | nivel_conocimiento | text | principiante / intermedio / experto |
 | objetivo_podcast | text | informarme / aprender / entretenerme |
 | horario_escucha | text | manana / mediodia / tarde / noche |
+| periodicidad | text | Frecuencia de generacion (migration 005) |
+| dias_personalizados | jsonb | Dias de generacion personalizados (migration 005) |
 | survey_completed | boolean | Si completo la encuesta del onboarding |
 | created_at | timestamptz | Fecha de creacion |
 | updated_at | timestamptz | Ultima actualizacion |
@@ -414,12 +474,69 @@ Episodios de podcast generados.
 | topics | text[] | Temas del episodio |
 | articles | jsonb | Articulos usados como fuente |
 | adjustments | text | Ajustes solicitados por el usuario |
+| is_shared | boolean | Si el episodio es publico (migration 008) |
+| shared_at | timestamptz | Fecha de comparticion (migration 008) |
+| search_vector | tsvector (generated) | Vector de busqueda full-text (migration 009) |
 | created_at | timestamptz | Fecha de creacion |
 
-**Indice:** `episodes_user_date_idx` en (user_id, created_at DESC).
-**RLS:** Cada usuario solo ve, crea y edita sus propios episodios.
+**Indices:** `episodes_user_date_idx` (user_id, created_at DESC), `episodes_shared_idx` (id WHERE is_shared), `episodes_search_idx` (GIN en search_vector).
+**RLS:** Cada usuario solo ve, crea y edita sus propios episodios. Episodios compartidos son publicos (lectura).
+**RPC:** `search_episodes(p_user_id, p_query, p_limit, p_offset)` — busqueda full-text con ranking.
 
-### 5.4 Tabla `raw_news`
+### 5.4 Tabla `schedules`
+
+Horarios de generacion automatica de podcasts (migration 006).
+
+| Columna | Tipo | Descripcion |
+|---------|------|-------------|
+| id | uuid (PK) | ID autogenerado |
+| user_id | uuid (FK, UNIQUE) | ID del usuario |
+| time | time | Hora de generacion (default 08:00) |
+| frequency | text | Frecuencia: daily / weekdays / custom |
+| custom_days | integer[] | Dias personalizados (0=dom, 6=sab) |
+| is_active | boolean | Si esta activo (default true) |
+| last_generated_at | timestamptz | Ultima generacion |
+| created_at | timestamptz | Fecha de creacion |
+| updated_at | timestamptz | Ultima actualizacion |
+
+**RLS:** Cada usuario solo gestiona su propio schedule.
+
+### 5.5 Tabla `episode_feedback`
+
+Feedback explicito del usuario sobre episodios (migration 007).
+
+| Columna | Tipo | Descripcion |
+|---------|------|-------------|
+| id | uuid (PK) | ID autogenerado |
+| episode_id | uuid (FK → episodes) | Episodio valorado |
+| user_id | uuid (FK → auth.users) | Usuario |
+| rating | smallint | Valoracion: 1 (thumbs down) o 5 (thumbs up) |
+| tags | text[] | Tags seleccionados (ej: "Buen ritmo", "Muy largo") |
+| comment | text | Comentario opcional (max 200 chars) |
+| created_at | timestamptz | Fecha de creacion |
+
+**Constraint:** UNIQUE(episode_id, user_id) — un feedback por episodio por usuario.
+**RLS:** Cada usuario solo gestiona su propio feedback.
+
+### 5.6 Tabla `listening_metrics`
+
+Metricas de escucha pasivas (migration 007).
+
+| Columna | Tipo | Descripcion |
+|---------|------|-------------|
+| id | uuid (PK) | ID autogenerado |
+| episode_id | uuid (FK → episodes) | Episodio |
+| user_id | uuid (FK → auth.users) | Usuario |
+| total_listen_time_seconds | integer | Tiempo total de escucha |
+| completion_rate | numeric | Tasa de completacion (0-1) |
+| playback_speed | numeric | Velocidad de reproduccion |
+| created_at | timestamptz | Fecha de creacion |
+| updated_at | timestamptz | Ultima actualizacion |
+
+**Constraint:** UNIQUE(episode_id, user_id).
+**RLS:** Cada usuario solo gestiona sus propias metricas.
+
+### 5.7 Tabla `raw_news`
 
 Noticias sin procesar, recopiladas por el News Agent.
 
@@ -445,7 +562,7 @@ Noticias sin procesar, recopiladas por el News Agent.
 **Indices:** `raw_news_unprocessed_idx`, `raw_news_source_idx`, `raw_news_fetched_idx`.
 **RLS:** Solo acceso via service_role (sin politicas publicas).
 
-### 5.5 Tabla `processed_news`
+### 5.8 Tabla `processed_news`
 
 Noticias clasificadas por Claude.
 
@@ -459,18 +576,21 @@ Noticias clasificadas por Claude.
 | relevance_score | integer (1-10) | Puntuacion de relevancia |
 | language | text | Idioma detectado |
 | keywords | text[] | Keywords extraidas por IA |
+| sentiment | text | Tono: positive / negative / neutral (migration 010) |
+| impact_scope | text | Alcance: local / national / global (migration 010) |
+| story_id | text | ID kebab-case que agrupa noticias del mismo tema (migration 010) |
 | url | text | URL de la noticia |
 | source_name | text | Nombre de la fuente |
 | published_at | timestamptz | Fecha de publicacion |
 | processed_at | timestamptz | Fecha de procesamiento |
 | created_at | timestamptz | Fecha de creacion |
 
-**Indices:** `processed_news_relevance_idx`, `processed_news_category_idx`, `processed_news_date_idx`.
+**Indices:** `processed_news_relevance_idx`, `processed_news_category_idx`, `processed_news_date_idx`, `processed_news_story_idx` (parcial, WHERE story_id IS NOT NULL), `processed_news_sentiment_idx`.
 **RLS:** Lectura publica (la app consulta para generar podcasts).
 
-### 5.6 Tabla `trending_topics`
+### 5.9 Tabla `trending_topics`
 
-Temas trending con score (creada pero no usada activamente todavia).
+Temas trending con score.
 
 | Columna | Tipo | Descripcion |
 |---------|------|-------------|
@@ -481,7 +601,9 @@ Temas trending con score (creada pero no usada activamente todavia).
 | category | text | Categoria |
 | date | date | Fecha (UNIQUE con topic) |
 
-### 5.7 Tabla `sources_health`
+Se consulta activamente desde `GET /api/trending` y se muestra en el tab "Trending" del dashboard.
+
+### 5.10 Tabla `sources_health`
 
 Estado de salud de cada fuente del agente.
 
@@ -500,7 +622,25 @@ Estado de salud de cada fuente del agente.
 
 **RPCs:** `increment_articles_fetched(source_id, count)`, `increment_consecutive_failures(source_id)`.
 
-### 5.8 Storage: Bucket `podcast-audio`
+### 5.11 Tabla `trending_clips`
+
+Cache de clips trending de 5 minutos generados on-demand. Un clip por tema por dia. Campo `status` previene thundering herd.
+
+| Columna | Tipo | Descripcion |
+|---------|------|-------------|
+| id | uuid (PK) | ID autogenerado |
+| topic | text | Tema del clip |
+| date | date | Fecha (default CURRENT_DATE) |
+| script | text | Guion generado |
+| articles | jsonb | Articulos usados como fuente |
+| status | text | Estado: generating, ready, error |
+| error_message | text | Mensaje de error (si fallo) |
+| created_at | timestamptz | Fecha de creacion |
+| updated_at | timestamptz | Ultima actualizacion |
+
+**Constraint:** UNIQUE(topic, date). **RLS:** SELECT publico.
+
+### 5.12 Storage: Bucket `podcast-audio`
 
 | Campo | Valor |
 |-------|-------|
@@ -509,16 +649,21 @@ Estado de salud de cada fuente del agente.
 | Estructura | `{user_id}/{episode_id}.mp3` |
 | Politica de upload | Solo usuarios autenticados, a su propia carpeta |
 
-### 5.9 Relaciones
+### 5.13 Relaciones
 
 ```
 auth.users
   ├── profiles (1:1, id = auth.users.id, CASCADE)
   ├── preferences (1:1, user_id, CASCADE)
-  └── episodes (1:N, user_id, CASCADE)
+  ├── episodes (1:N, user_id, CASCADE)
+  │     ├── episode_feedback (1:1 por usuario, episode_id, CASCADE)
+  │     └── listening_metrics (1:1 por usuario, episode_id, CASCADE)
+  └── schedules (1:1, user_id, CASCADE)
 
 raw_news
   └── processed_news (1:1, raw_news_id, CASCADE)
+
+trending_clips (standalone, cache diario por topic)
 ```
 
 ---
@@ -537,10 +682,12 @@ Archivo: `.env.local` (no se sube al repo). Referencia: `.env.example`.
 | `NEWSAPI_KEY` | No** | API key de NewsAPI.org (fuente del agente) | [newsapi.org](https://newsapi.org) → registrarse → API key |
 | `ELEVENLABS_API_KEY` | No*** | API key de ElevenLabs (TTS profesional) | [elevenlabs.io](https://elevenlabs.io) → Profile → API key |
 | `ELEVENLABS_VOICE_ID` | No | ID de voz personalizada de ElevenLabs | [elevenlabs.io](https://elevenlabs.io) → Voices → copiar ID |
+| `CRON_SECRET` | Si**** | Secret para autenticar cron jobs de Vercel | Generado manualmente, configurado en Vercel env vars |
 
 \* Solo necesaria como fallback si el News Agent no tiene suficientes articulos.
 \*\* Necesaria para que el News Agent recopile noticias de NewsAPI.org.
 \*\*\* Sin ElevenLabs funciona igual usando Web Speech API del navegador.
+\*\*\*\* Necesaria para que los cron jobs de Vercel se ejecuten de forma segura.
 
 ---
 
@@ -548,7 +695,9 @@ Archivo: `.env.local` (no se sube al repo). Referencia: `.env.example`.
 
 ### 7.1 Fuentes configuradas
 
-**8 feeds RSS:**
+**Configuracion v2.0** (`sources.json`): 19 feeds RSS + 1 API. Formato plano con array `sources[]` y campo `type` (rss/newsapi).
+
+**19 feeds RSS:**
 
 | ID | Nombre | Idioma | Categoria |
 |----|--------|--------|-----------|
@@ -560,6 +709,17 @@ Archivo: `.env.local` (no se sube al repo). Referencia: `.env.example`.
 | elpais-portada | El Pais | es | general |
 | bbc-mundo | BBC Mundo | es | general |
 | xataka | Xataka | es | technology |
+| eldiario | elDiario.es | es | general |
+| 20minutos | 20 Minutos | es | general |
+| elmundo-portada | El Mundo | es | general |
+| elespanol-espana | El Espanol - Espana | es | politics |
+| elespanol-invertia | El Espanol - Invertia | es | business |
+| europapress | Europa Press | es | general |
+| genbeta | Genbeta | es | technology |
+| newtral | Newtral | es | politics |
+| expansion | Expansion | es | business |
+| gnews-ia | Google News - IA (ES) | es | technology |
+| gnews-startups | Google News - Startups Espana | es | business |
 
 **1 API:**
 
@@ -567,13 +727,25 @@ Archivo: `.env.local` (no se sube al repo). Referencia: `.env.example`.
 |----|--------|------------|
 | newsapi | NewsAPI.org | technology, science, business, health, entertainment, sports + headlines en espanol |
 
-### 7.2 Flujo de recoleccion
+### 7.2 Automatizacion con Vercel Cron
+
+Configurado en `vercel.json`:
+
+| Cron job | Ruta | Horario | Descripcion |
+|----------|------|---------|-------------|
+| Fetch news | `/api/cron/fetch-news` | `0 5 * * *` (05:00 UTC diario) | Recopila noticias de 20 fuentes |
+| Process news | `/api/cron/process-news` | `30 5 * * *` (05:30 UTC diario) | Clasifica noticias con Claude |
+| Generate scheduled | `/api/cron/generate-scheduled` | `0 7 * * *` (07:00 UTC diario) | Genera podcasts programados por usuarios |
+| Cleanup | `/api/cron/cleanup` | `0 3 * * 0` (03:00 UTC domingos) | Limpia noticias antiguas |
+| Weekly digest | `/api/cron/weekly-digest` | `0 10 * * 0` (10:00 UTC domingos) | Genera digest semanal |
+
+### 7.3 Flujo de recoleccion
 
 ```
-npm run agent:fetch
+npm run agent:fetch (o Vercel Cron /api/cron/fetch-news)
 │
-├── 8 feeds RSS en paralelo (Promise.allSettled)
-│   └── rss-parser con timeout 10s, User-Agent "PodcastAI-NewsAgent/1.0"
+├── 19 feeds RSS en paralelo (Promise.allSettled)
+│   └── rss-parser con timeout 15s, User-Agent "WaveCast-NewsAgent/2.0"
 │
 ├── NewsAPI.org en secuencial (para no agotar rate limit)
 │   ├── top-headlines por cada categoria (6 categorias, pageSize=20)
@@ -585,46 +757,52 @@ npm run agent:fetch
     └── Actualiza sources_health con resultado de cada fuente
 ```
 
-### 7.3 Procesamiento de noticias
+### 7.4 Procesamiento de noticias
 
 ```
-npm run agent:process
+npm run agent:process (o Vercel Cron /api/cron/process-news)
 │
-├── Obtiene batch de 20 noticias raw sin procesar (config: processing.batch_size)
+├── Obtiene batch de 40 noticias raw sin procesar (config: processing.batch_size)
 │
-├── Deduplicacion por titulo
-│   └── Normaliza: minusculas, sin acentos, sin puntuacion
-│   └── Calcula word overlap entre titulos (>70% = duplicado)
+├── Deduplicacion v2 (dos pasadas)
+│   ├── Pasada 1 — Dedup interna del batch:
+│   │   └── Normaliza: minusculas, sin acentos, sin puntuacion, sin stopwords (es+en)
+│   │   └── Duplicado si: >70% word overlap en titulo O >60% en descripcion
+│   │   └── Al encontrar duplicados, se queda con el de descripcion mas larga
+│   └── Pasada 2 — Dedup cross-temporal contra processed_news:
+│       └── Consulta titulos de las ultimas 24h en processed_news
+│       └── Descarta si >70% word overlap en titulo contra ya procesados
 │
 ├── Clasificacion con Claude (batches de 10)
 │   ├── Modelo: claude-sonnet-4-20250514
 │   ├── Temperature: 0.3
-│   ├── Asigna: category, relevance_score (1-10), summary, language, keywords
-│   ├── JSON parsing robusto (maneja objetos sueltos, trailing commas, valida campos)
+│   ├── Asigna: category, relevance_score (1-10), summary, language, keywords, sentiment, impact_scope, story_id
+│   ├── max_tokens: 3072 por batch
+│   ├── JSON parsing robusto (maneja objetos sueltos, trailing commas, valida 9 campos con defaults)
 │   └── 1 reintento con 3s backoff si falla
 │
 ├── Guarda en processed_news
 └── Marca raw_news como processed=true
 ```
 
-### 7.4 Mapeo de topics del usuario a categorias del agente
+### 7.5 Mapeo de topics del usuario a categorias del agente
 
 | Topic del usuario | Categorias en processed_news |
 |-------------------|------------------------------|
 | tecnologia | technology |
 | inteligencia-artificial | technology, science |
 | ciencia | science |
-| politica | politics |
+| politica | politics, general |
 | economia | business |
 | startups | business, technology |
 | salud | health |
 | cultura | entertainment |
 
-### 7.5 Comandos CLI
+### 7.6 Comandos CLI
 
 ```bash
-npm run agent:fetch      # Recopila noticias de todas las fuentes → raw_news
-npm run agent:process    # Procesa batch de 20 noticias raw → classified processed_news
+npm run agent:fetch      # Recopila noticias de 20 fuentes → raw_news
+npm run agent:process    # Procesa batch de 40 noticias raw → classified processed_news
 npm run agent:top        # Muestra top 10 noticias mas relevantes de hoy
 npm run agent:top 2026-02-19  # Top 10 de una fecha especifica
 npm run agent:cleanup    # Limpia noticias antiguas (processed >7d, raw processed >7d, raw unprocessed >14d)
@@ -638,34 +816,73 @@ npm run agent:cleanup    # Limpia noticias antiguas (processed >7d, raw processe
 
 | Ruta | Descripcion | Autenticacion |
 |------|-------------|---------------|
-| `/` | Redirect a `/onboarding` | No |
+| `/` | Landing page publica con hero, features y CTA. Redirect a `/dashboard` si logueado | No |
 | `/login` | Login con email/password | No |
 | `/signup` | Registro (envia email de confirmacion) | No |
 | `/auth/callback` | Callback de confirmacion de email | No |
-| `/onboarding` | 3 pasos: encuesta personal → temas → config | Opcional |
-| `/onboarding/confirmacion` | Resumen de preferencias, boton "Generar podcast" | Opcional |
-| `/podcast` | Generacion y visualizacion del podcast | Opcional |
-| `/dashboard` | Dashboard principal con ultimo episodio y preferencias | Si |
-| `/historial` | Lista de todos los episodios generados | Si |
-| `/historial/[id]` | Detalle de un episodio especifico | Si |
-| `/perfil` | Editar datos personales y preferencias | Si |
+| `/onboarding` | 4 pasos: encuesta personal → horario → temas → config | Opcional |
+| `/onboarding/confirmacion` | Eliminada (v15) — redireccion directa a /dashboard | — |
+| `/podcast` | Redirect a /dashboard (legacy) | No |
+| `/dashboard` | Dashboard principal con 4 tabs: Hoy, Historial, Descubrir, Mi Perfil | Si |
+| `/shared/[id]` | Pagina publica de episodio compartido (sin auth) | No |
 
-### 8.2 Framework de UI
+### 8.2 Framework de UI — Estetica Spotify
 
-- **Tailwind CSS v4** con tema claro basado en `stone` (oklch)
+- **Tailwind CSS v4** con paleta oscura estilo Spotify
 - **shadcn/ui** (estilo new-york, Radix UI) para Dialog, Button, Card, etc.
 - **Lucide React** para iconos
-- **Fuentes:** Inter (sans) + Geist Mono (monospace)
-- Fondo global: `bg-stone-100`
+- **Fuentes:** Inter (body, sans-serif) + Montserrat (headings h1/h2, bold) + Geist Mono (monospace)
 
-### 8.3 Rutas protegidas
+**Paleta de colores:**
+
+| Token | Valor | Uso |
+|-------|-------|-----|
+| `--color-forest` | `#1DB954` | Verde primario Spotify (botones, acentos, links) |
+| `--color-forest-light` | `#1ed760` | Verde hover |
+| `--color-cream` | `#000000` | Fondo principal (negro puro) |
+| `--color-cream-light` | `#121212` | Surface (cards, paneles) |
+| `--color-cream-dark` | `#282828` | Elevated surface (inputs, selects) |
+| `--color-dark` | `#FFFFFF` | Texto principal (blanco) |
+| `--color-muted` | `#B3B3B3` | Texto secundario |
+| `--color-muted-light` | `#727272` | Texto terciario |
+
+**Componentes base:**
+- `.glass-card` → `bg-[#121212] border border-white/10 rounded-lg` (flat, sin blur)
+- `.glass-input` → `bg-[#282828] border border-white/10 rounded-lg` con focus ring verde
+- Backgrounds solidos en nav, tab bar y player (sin backdrop-blur)
+
+### 8.3 Dashboard — 4 tabs
+
+El dashboard (`/dashboard`) es un componente con 4 tabs accesibles (ARIA tablist/tab/tabpanel):
+
+| Tab | Componente | Descripcion |
+|-----|-----------|-------------|
+| Podcast | `PodcastTab` | Episodio del dia, digest semanal, ultimos episodios, estadisticas, banner PWA |
+| Historial | `HistorialTab` | Lista de episodios con filtros (tema, tono, fecha), busqueda full-text, paginacion |
+| Trending | `TrendingTab` | Top 10 temas trending del dia con scores y categorias |
+| Mi Perfil | `PerfilTab` | 4 secciones colapsables: Tu perfil (encuesta), Preferencias (temas/duracion/tono/voz), Generacion automatica (horario), Cuenta (email/logout). Barra de progreso de perfil. Guardado independiente por seccion. |
+
+### 8.4 Onboarding — 4 pasos
+
+El onboarding (`/onboarding`) guia al usuario en 4 pasos:
+
+| Paso | Componente | Descripcion |
+|------|-----------|-------------|
+| 1. Encuesta | `StepSurvey` | Nombre*, edad, ciudad, rol, sector, nivel*, objetivo*, horario* |
+| 2. Horario | `StepSchedule` | Hora de generacion, frecuencia (diario/laborables/custom), dias |
+| 3. Temas | `StepTopics` | Seleccion de 3-5 temas de los 8 disponibles |
+| 4. Config | `StepConfig` | Duracion (5/15/30 min), tono (casual/profesional/deep-dive), voz (femenina/masculina) |
+
+### 8.5 Rutas protegidas y middleware
 
 El archivo `proxy.ts` actua como middleware (convencion Next.js 16):
-- Protege `/dashboard`, `/historial`, `/perfil` → redirige a `/login` si no hay sesion
-- Si el usuario logueado va a `/login` o `/signup` → redirige a `/dashboard`
-- Refresca el token de Supabase en cada request
+- **CSRF:** Valida Origin header en peticiones mutantes (POST/PUT/PATCH/DELETE) a `/api/*`
+- **Sesion:** Refresca el token de Supabase en cada request
+- **Rutas protegidas:** `/dashboard`, `/historial` → redirige a `/login` si no hay sesion
+- **Redirect login:** Si el usuario logueado va a `/login` o `/signup` → redirige a `/dashboard`
+- **Onboarding enforcement:** Si usuario autenticado va a ruta protegida sin cookie `wavecast_onboarding_complete` → redirige a `/onboarding`
 
-### 8.4 Rate limiting
+### 8.6 Rate limiting
 
 Las API routes tienen rate limiting en memoria (`lib/rate-limit.ts`):
 - `POST /api/generate-podcast`: 10 peticiones por minuto por IP
@@ -673,58 +890,86 @@ Las API routes tienen rate limiting en memoria (`lib/rate-limit.ts`):
 - Limpieza automatica de entradas caducadas cada 60 segundos
 - Nota: en Vercel, cada instancia serverless tiene su propia memoria, por lo que el rate limit es por instancia
 
-### 8.5 Paginacion
+### 8.7 Seguridad
 
-La pagina de historial (`/historial`) implementa paginacion:
-- 10 episodios por pagina
-- Boton "Cargar mas episodios" para cargar la siguiente pagina
-- Muestra contador total de episodios generados
+| Medida | Descripcion |
+|--------|-------------|
+| CSRF | Validacion de Origin header en proxy.ts para mutating requests |
+| XSS | HTML sanitizado en renderMarkdown (escapeHtml) |
+| RLS | Row Level Security en todas las tablas de usuario |
+| Auth | Supabase Auth con JWT, refresh automatico en middleware |
+| Input validation | Validacion estricta de topics, duration, tone, adjustments en API |
+| Rate limiting | Por IP en API routes criticas |
 
-### 8.6 Flujos de usuario
+### 8.8 Sistema de feedback y personalizacion
+
+1. **Feedback explicito** (`episode-feedback.tsx` → `POST /api/feedback`):
+   - Thumbs up (rating=5) / Thumbs down (rating=1)
+   - Tags predefinidos (positivos: "Buen ritmo", "Temas interesantes", etc. / negativos: "Muy largo", "Demasiado basico", etc.)
+   - Comentario opcional (max 200 chars)
+
+2. **Metricas pasivas** (`POST /api/metrics`):
+   - Tiempo total de escucha, tasa de completacion, velocidad de reproduccion
+
+3. **User Insights** (`lib/user-insights.ts`):
+   - Agrega feedback y metricas para inyectar en el prompt de Claude
+   - Solo se activa con >= 3 feedbacks del usuario
+   - Informa a Claude sobre: temas/tonos preferidos, tags mas comunes, tasa de escucha, velocidad habitual
+
+### 8.9 Flujos de usuario
 
 **Flujo A: Nuevo usuario (primera vez)**
 
 ```
 1. Usuario abre la app
-   └→ GET / → redirect a /onboarding
+   └→ GET / → Landing page (hero, features, CTA)
+   └→ Click "Empezar gratis" → /signup
 
-2. Onboarding - Paso 1: Encuesta personal ("Cuentanos sobre ti")
+2. Registro → email de confirmacion → /auth/callback → /onboarding
+
+3. Onboarding - Paso 1: Encuesta personal ("Cuéntanos sobre ti")
    └→ Inputs: nombre*, edad, ciudad, rol, sector
    └→ Pickers: nivel_conocimiento* (principiante/intermedio/experto)
    └→           objetivo_podcast* (informarme/aprender/entretenerme)
-   └→           horario_escucha* (manana/mediodia/tarde/noche)
+   └→           horario_escucha* (mañana/mediodía/tarde/noche)
    └→ (* = obligatorio)
-   └→ POST /api/profile con survey_completed=true
 
-3. Onboarding - Paso 2: Elegir temas
+4. Onboarding - Paso 2: Horario de generacion
+   └→ Hora exacta, frecuencia (diario/laborables/custom), dias
+   └→ POST /api/schedule
+
+5. Onboarding - Paso 3: Elegir temas
    └→ Selecciona 3-5 temas de los 8 disponibles
 
-4. Onboarding - Paso 3: Configurar podcast
-   └→ Elige duracion: 5 min (Express), 15 min (Estandar), 30 min (Deep Dive)
+6. Onboarding - Paso 4: Configurar podcast
+   └→ Elige duracion: 5 min (Express), 15 min (Estándar), 30 min (Deep Dive)
    └→ Elige tono: Casual, Profesional, Deep-dive
    └→ Elige voz: Femenina o Masculina
-   └→ Guarda en localStorage + POST /api/preferences (si logueado)
+   └→ POST /api/profile + POST /api/preferences
+   └→ Set cookie wavecast_onboarding_complete
    └→ Redirect a /onboarding/confirmacion
 
-5. Confirmacion → Click "Generar mi primer podcast" → Redirect a /podcast
+7. Confirmacion → Click "Generar mi primer podcast" → Redirect a /podcast
 
-6. Generacion del podcast (pagina /podcast)
+8. Generacion del podcast (pagina /podcast)
    └→ Proteccion doble-click: AbortController + boton deshabilitado
    └→ POST /api/generate-podcast con {topics, duration, tone}
       ├→ Validacion de inputs (topics, duration, tone, adjustments)
       ├→ Rate limiting (10 req/min por IP)
-      ├→ fetchFromAgent(topics) — consulta processed_news (ultimas 48h)
+      ├→ fetchFromAgent(topics, duration) — selección inteligente (diversidad + sorpresa) + cache
       ├→ Si no hay suficientes: fallback a GNews API
       ├→ Fetch perfil del usuario (nombre, nivel, objetivo, horario)
-      ├→ generateScript() — Claude genera guion personalizado (timeout 55s)
+      ├→ getUserInsights() — historial de feedback si hay >= 3
+      ├→ trending_topics — top 3 temas trending del dia
+      ├→ generateScript() — Claude genera guion con trending + sentiment + conexiones
       └→ Guarda episodio en Supabase
 
-7. Resultado: guion renderizado + fuentes + BrowserAudioPlayer
+9. Resultado: guion renderizado + fuentes + BrowserAudioPlayer + EpisodeFeedback
    └→ Botones: Regenerar, Ajustar, Cambiar preferencias
 
-8. Escuchar
-   └→ Opcion A: Web Speech API (gratis, en tiempo real)
-   └→ Opcion B: POST /api/generate-audio → ElevenLabs → MP3 → AudioPlayer
+10. Escuchar
+    └→ Opcion A: Web Speech API (gratis, en tiempo real)
+    └→ Opcion B: POST /api/generate-audio → ElevenLabs → MP3 → AudioPlayer
 ```
 
 **Flujo B: Usuario recurrente**
@@ -732,25 +977,41 @@ La pagina de historial (`/historial`) implementa paginacion:
 ```
 1. Login → Supabase Auth → Auth callback con routing de 3 vias:
    ├→ Tiene preferences → /dashboard
-   ├→ Tiene survey_completed pero no preferences → /onboarding?step=2
+   ├→ No tiene preferences → /onboarding (paso 1: temas)
    └→ No tiene survey → /onboarding
 
-2. Dashboard: saludo contextual, episodio del dia, ultimos 3, stats
+2. Dashboard - Tab Podcast: saludo contextual, episodio del dia, digest semanal, stats
+   Dashboard - Tab Historial: lista con filtros (tema, tono, fecha) + busqueda full-text
+   Dashboard - Tab Trending: top 10 temas trending con scores
+   Dashboard - Tab Mi Perfil: 4 secciones (perfil+encuesta, preferencias, generacion automatica, cuenta)
 
-3. Historial: lista paginada (10/pagina) → detalle con guion + audio
+3. Ajustar episodio: dialog con sugerencias rapidas + texto libre → regenera
 
-4. Ajustar episodio: dialog con sugerencias rapidas + texto libre → regenera
+4. Feedback: thumbs up/down + tags + comentario → mejora futuros episodios
 ```
 
 **Flujo C: Middleware (en cada request)**
 
 ```
 1. Cada peticion HTTP pasa por proxy.ts (convencion Next.js 16)
+   └→ CSRF check en peticiones mutantes a /api/*
    └→ Refresca token de sesion de Supabase
-   └→ Si ruta protegida (/dashboard, /historial, /perfil) y no logueado:
+   └→ Si ruta protegida (/dashboard, /historial) y no logueado:
       └→ Redirect a /login?redirect=/ruta-original
    └→ Si logueado y va a /login o /signup:
       └→ Redirect a /dashboard
+   └→ Si logueado, ruta protegida y sin cookie wavecast_onboarding_complete:
+      └→ Redirect a /onboarding
+```
+
+**Flujo D: Cron jobs automatizados**
+
+```
+1. 05:00 UTC — /api/cron/fetch-news: recopila noticias de 20 fuentes
+2. 05:30 UTC — /api/cron/process-news: clasifica con Claude
+3. 07:00 UTC — /api/cron/generate-scheduled: genera podcasts para usuarios con schedule activo
+4. Domingos 03:00 UTC — /api/cron/cleanup: limpia noticias antiguas
+5. Domingos 10:00 UTC — /api/cron/weekly-digest: genera digest semanal
 ```
 
 ---
@@ -759,15 +1020,15 @@ La pagina de historial (`/historial`) implementa paginacion:
 
 | Componente | Plataforma | URL |
 |------------|-----------|-----|
-| Frontend + API | Vercel | https://podcast-ai-sigma.vercel.app |
+| Frontend + API + Cron | Vercel | https://podcast-ai-sigma.vercel.app |
 | Base de datos | Supabase | `NEXT_PUBLIC_SUPABASE_URL` |
 | Storage (audio) | Supabase Storage | Bucket `podcast-audio` |
-| News Agent | Local (CLI manual) | No desplegado |
 
 **Vercel:**
 - Project ID: `prj_YgUD18SkMpKPe4xkOxmqAs47uAlK`
 - Org ID: `team_UnanlHXGfKm6eBPAdJNfbCMr`
 - No hay dominio custom configurado
+- Cron jobs configurados en `vercel.json` (5 tareas programadas)
 
 **CI/CD:**
 - GitHub repo: https://github.com/angideosuna/podcast-ai.git (rama `master`)
@@ -787,13 +1048,14 @@ npx vercel --prod
 ### 9.2 Variables de entorno en Vercel
 
 Todas las variables de `.env.local` deben estar configuradas en el dashboard de Vercel:
-Settings → Environment Variables.
+Settings → Environment Variables. Incluir `CRON_SECRET` para autenticar los cron jobs.
 
 ### 9.3 Configuracion de Vercel
 
 - **Framework:** Next.js (detectado automaticamente)
 - **Build command:** `next build`
 - **maxDuration:** 60s en `generate-audio/route.ts` (para que ElevenLabs tenga tiempo)
+- **Cron jobs:** 5 tareas en `vercel.json` (ver seccion 7.2)
 
 ---
 
@@ -809,8 +1071,8 @@ npm run start           # Arranca servidor de produccion
 npm run lint            # ESLint
 
 # === News Agent ===
-npm run agent:fetch     # Recopila noticias de 9 fuentes → raw_news
-npm run agent:process   # Procesa batch de 20 raw → processed_news (Claude)
+npm run agent:fetch     # Recopila noticias de 20 fuentes → raw_news
+npm run agent:process   # Procesa batch de 40 raw → processed_news (Claude)
 npm run agent:top       # Top 10 noticias mas relevantes de hoy
 npm run agent:cleanup   # Limpia noticias antiguas de la base de datos
 ```
@@ -829,11 +1091,17 @@ cp .env.example .env.local
 # Editar .env.local con tus API keys
 
 # 4. Crear tablas en Supabase
-# Ejecutar las 4 migraciones en el SQL Editor de Supabase:
+# Ejecutar las 10 migraciones en el SQL Editor de Supabase:
 # supabase/migrations/001_initial_schema.sql
 # supabase/migrations/002_add_voice_to_preferences.sql
 # supabase/migrations/003_add_survey_fields.sql
 # supabase/migrations/004_news_agent_tables.sql
+# supabase/migrations/005_add_schedule_fields.sql
+# supabase/migrations/006_schedules.sql
+# supabase/migrations/007_feedback_and_metrics.sql
+# supabase/migrations/008_shared_episodes.sql
+# supabase/migrations/009_fulltext_search_episodes.sql
+# supabase/migrations/010_enhanced_classification.sql
 
 # 5. Arrancar el servidor
 npm run dev
@@ -843,7 +1111,7 @@ npm run dev
 ### 10.3 Ejecutar el agente
 
 ```bash
-# Recopilar noticias (ejecutar periodicamente)
+# Recopilar noticias (ejecutar periodicamente, o dejar que Vercel Cron lo haga)
 npm run agent:fetch
 
 # Procesar con IA (ejecutar despues de fetch)
@@ -856,10 +1124,11 @@ npm run agent:top
 ### 10.4 Generar un podcast
 
 1. Abrir `http://localhost:3000`
-2. Completar el onboarding (encuesta + temas + config)
+2. Registrarse y completar el onboarding (4 pasos: encuesta + horario + temas + config)
 3. En la pantalla de confirmacion, clic "Generar mi podcast"
 4. La app consulta `processed_news` (o GNews como fallback), Claude genera el guion
 5. Clic "Escuchar" para Web Speech API o "Generar audio" para ElevenLabs
+6. Dejar feedback (thumbs up/down + tags) para mejorar futuros episodios
 
 ### 10.5 Verificar el build
 
@@ -876,47 +1145,277 @@ npm run build       # Build completo de produccion
 
 | Feature | Estado |
 |---------|--------|
+| Landing page publica con hero, features y CTA | OK |
 | Registro e inicio de sesion (email/password) | OK |
-| Onboarding completo (3 pasos: encuesta + temas + config) | OK |
+| Onboarding simplificado (2 pasos: temas + config) | OK |
 | Encuesta personal (nombre, edad, ciudad, nivel, objetivo, horario) | OK |
-| News Agent con 9 fuentes (8 RSS + NewsAPI) | OK |
-| Deduplicacion de noticias por titulo | OK |
-| Clasificacion con Claude (batches, retry, JSON robusto) | OK |
+| Horario de generacion automatica (diario/laborables/custom) | OK |
+| News Agent con 20 fuentes (19 RSS + NewsAPI) | OK |
+| Automatizacion con Vercel Cron (5 tareas programadas) | OK |
+| Deduplicacion v2: titulo + descripcion + stopwords + cross-temporal 24h | OK |
+| Clasificacion enriquecida con Claude (sentiment, impact_scope, story_id) | OK |
 | Batch upsert en raw_news | OK |
-| Generacion de guion con Claude personalizado al perfil | OK |
+| Generacion de guion con Claude (trending, sentiment, conexiones, sorpresa, story grouping) | OK |
+| User insights basados en feedback/metricas inyectados en prompt | OK |
+| Cache en memoria para articulos (TTL 1 hora) | OK |
+| Retry con backoff exponencial para APIs externas | OK |
 | Validacion estricta de inputs en API (topics, duration, tone, adjustments) | OK |
 | Proteccion doble-click con AbortController | OK |
+| Proteccion CSRF en proxy.ts (Origin header validation) | OK |
 | Reproduccion con Web Speech API (fallback TTS) | OK |
 | Generacion de audio con ElevenLabs | OK |
 | Reproductor de audio completo (play, pause, seek, velocidad) | OK |
 | Ajustar/regenerar episodio con instrucciones | OK |
-| Dashboard con ultimo episodio y preferencias | OK |
-| Historial de episodios con paginacion | OK |
-| Detalle de episodio | OK |
+| Dashboard con 4 tabs (Hoy, Historial, Descubrir, Mi Perfil) | OK |
+| Historial con filtros (tema, tono, fecha) y busqueda full-text | OK |
+| Full-text search con tsvector + GIN index + RPC search_episodes() | OK |
+| Trending topics (tab en dashboard con top 10 temas del dia) | OK |
+| Feedback de episodios (thumbs up/down + tags + comentario) | OK |
+| Metricas de escucha pasivas (completion rate, playback speed) | OK |
+| Compartir episodios publicamente (/shared/[id]) | OK |
+| Digest semanal automatico (cron domingos) | OK |
+| Paginacion en historial (10 por pagina, "Cargar mas") | OK |
 | Edicion de perfil | OK |
-| Markdown renderer (tema claro, HTML sanitizado) | OK |
+| PWA manifest con instalacion nativa | OK |
+| Estetica Spotify (negro + verde #1DB954, cards flat, sin glass) | OK |
+| Tipografia Montserrat para headings (h1/h2) | OK |
+| Markdown renderer (tema oscuro, HTML sanitizado) | OK |
 | Emoji removal universal (regex Unicode) en TTS | OK |
 | Sanitizacion de newlines en prompt | OK |
 | Logger profesional con contexto y colores | OK |
 | Tipos centralizados | OK |
 | getTopicById utility (evita TOPICS.find repetido) | OK |
 | Constante ARTICLES_BY_DURATION compartida | OK |
+| Estructura narrativa con arco (gancho/desarrollo/respiro/climax/cierre) | OK |
+| Profundidad informativa adaptada por duracion (5/15/30 min) | OK |
+| Ritmo y energia variable dentro del episodio | OK |
+| Saludo personalizado por nombre al inicio del podcast | OK |
 | TOPIC_TO_CATEGORIES centralizado en lib/topics.ts | OK |
 | Cliente Supabase reutilizado en route | OK |
 | Log warning en profile catch (no silencioso) | OK |
 | JSON.parse seguro en localStorage | OK |
 | Response.ok antes de JSON parse | OK |
 | Rate limiting en API routes (por IP) | OK |
-| Filtro de 48h en fetchFromAgent (noticias frescas) | OK |
+| Selección inteligente de artículos (diversidad temas/fuentes, keyword dedup, sorpresa, story grouping) | OK |
 | max_tokens dinamico segun duracion (4096/8192/12288) | OK |
 | Timeout de 55s en llamadas a Claude (AbortController) | OK |
 | Cliente Anthropic singleton (reutilizado entre peticiones) | OK |
 | Script de limpieza de noticias antiguas (agent:cleanup) | OK |
 | HTML sanitizado en renderMarkdown (prevencion XSS) | OK |
 | Middleware activo (proxy.ts, convencion Next.js 16) | OK |
+| Onboarding enforcement via cookie en middleware | OK |
+| Accesibilidad ARIA en tab bar del dashboard | OK |
+| Trending clips de 5 min (top 5 temas polemicos, cache diario, thundering herd) | OK |
+| Clip audio player inline (sin metricas, voz femenina por defecto) | OK |
+| Tab Hoy: generacion integrada en dashboard (sin pagina /podcast separada) | OK |
+| Tab Descubrir: todos los trending topics con generacion de clips | OK |
+| /podcast → redirect automatico a /dashboard | OK |
 | Build de produccion | OK |
 
 ### 11.2 Changelog
+
+**v17.3 — Limpieza final de reestructuracion UI:**
+- Eliminados step-survey.tsx y step-schedule.tsx (logica ya migrada a perfil-tab.tsx, no se importaban)
+- app/onboarding/confirmacion/ ya no existia (eliminada en v15)
+- app/podcast/page.tsx ya era redirect a /dashboard (sin cambios)
+- Onboarding queda con 2 componentes: step-topics.tsx + step-config.tsx
+- Build limpio, 0 imports rotos, 0 archivos muertos
+
+**v17.2 — Limpieza de navegacion y middleware:**
+- proxy.ts: eliminado /podcast de protectedPaths (ya es solo un redirect a /dashboard)
+- auth/callback/route.ts: simplificado flujo post-login — solo comprueba preferences (ya no consulta survey_completed)
+- auth/callback: eliminado redirect a /onboarding?step=2 (el paso 1 ahora es temas, no encuesta)
+- nav-header.tsx y app/page.tsx ya estaban correctos (sin cambios)
+- Sin referencias stale a PodcastTab, TrendingTab o "Trending" en codigo
+
+**v17.1 — Sugerencia de horario automatico post-generacion:**
+- hoy-tab.tsx: banner de sugerencia de schedule tras generar podcast exitosamente
+- Condiciones: sin schedule activo + mostrado < 3 veces (localStorage wavecast_schedule_prompt_count)
+- Boton "Activar podcast diario a las 8:00" → POST /api/schedule (daily, 08:00, is_active:true)
+- Link "Personalizar horario" → cambia a tab Mi Perfil (seccion Generacion automatica)
+- Boton X para descartar (incrementa contador en localStorage, max 3 dismissals)
+- Confirmacion inline: "Listo. Mañana a las 8:00 tendras tu podcast esperandote"
+- Animacion fade-in + slide-up con tw-animate-css (animate-in fade-in slide-in-from-bottom-2)
+- Aparece con delay de 800ms tras fase "done", card con borde verde sutil (border-forest/20)
+
+**v17 — Tab Mi Perfil ampliado con encuesta + horario + preferencias:**
+- perfil-tab.tsx reescrito: 4 secciones colapsables con guardado independiente
+- Seccion A "Tu perfil": nombre, edad (select), ciudad, rol, sector (select), nivel de conocimiento (OptionPicker), objetivo del podcast (OptionPicker), horario de escucha (OptionPicker)
+- Seccion B "Preferencias de podcast": temas (CategoryCard + OtrosSection), duracion (DurationPicker), tono (TonePicker), voz (VoicePicker)
+- Seccion C "Generacion automatica": toggle activar/desactivar, hora (input time), periodicidad (pills), dias personalizados (botones circulares L-D)
+- Seccion D "Cuenta": email (solo lectura) + cerrar sesion
+- Barra de progreso de perfil (11 campos, se oculta al 100%)
+- Mapeo bidireccional UI↔API: periodicidad (todos-los-dias↔daily, lunes-a-viernes↔weekdays, personalizado↔custom), dias (L→1, M→2, X→3, J→4, V→5, S→6, D→0)
+- Reutiliza 6 componentes existentes: OptionPicker, DurationPicker, TonePicker, VoicePicker, CategoryCard, OtrosSection
+- hoy-tab.tsx: banner "Completa tu perfil" cuando survey_completed=false, con boton que cambia a tab Mi Perfil
+- dashboard/page.tsx: estado surveyCompleted, query ampliada a "nombre, survey_completed", callbacks switchToPerfil + handleSurveyChange
+- Al guardar perfil con nivelConocimiento + objetivoPodcast → survey_completed=true automaticamente
+- Sin archivos nuevos: 3 archivos modificados
+
+**v16 — Fusion de /podcast en dashboard como tab "Hoy":**
+- Nueva tab "Hoy" (hoy-tab.tsx): fusiona generacion de podcast + vista dashboard en un solo componente
+- Estado idle: saludo, episodio de hoy (si existe), digest semanal, ultimos episodios, stats, PWA install
+- Estado generando: animacion loading con fases (noticias → guion → listo)
+- Estado done: script renderizado, fuentes, feedback, regenerar/ajustar/compartir, audio player
+- Estado error: mensaje + reintentar/volver
+- Tab "Podcast" → renombrada a "Hoy" (icono Mic, emoji headphones)
+- Tab "Trending" → renombrada a "Descubrir" (icono Compass, emoji lupa)
+- descubrir-tab.tsx: todos los trending topics ahora pueden generar clips (no solo top 5)
+- Seccion "Mas trending" convertida de Link cards a clip-capable cards (antes enlazaban a /podcast)
+- app/podcast/page.tsx: convertida a redirect simple a /dashboard
+- Eliminados componentes obsoletos: podcast-tab.tsx, trending-tab.tsx
+- historial-tab.tsx: referencia /podcast actualizada a /dashboard
+- onEpisodeGenerated callback: notifica al dashboard cuando se genera episodio (actualiza recentEpisodes)
+- proxy.ts: /podcast eliminado de rutas protegidas en v17.2 (es solo redirect a /dashboard)
+
+**v15 — Reestructuracion onboarding de 4 pasos a 2:**
+- Paso 1: Seleccion de temas (era paso 3) — titulo motivador "¿Que te interesa?"
+- Paso 2: Config rapida (duracion + tono + voz + nombre) — boton "Crear mi podcast"
+- Eliminada pagina /onboarding/confirmacion — redireccion directa a /dashboard
+- step-survey.tsx y step-schedule.tsx se mantenian como reservados; eliminados en v17.3 (logica migrada a perfil-tab)
+- Nombre del usuario se guarda via POST /api/profile (solo campo nombre)
+- Preferencias + nombre se guardan en paralelo al finalizar
+- Barra de progreso muestra 2 pasos en vez de 4
+- Boton "Atras" condicional en step-topics (no aparece en paso 1)
+- Estado "saving" con spinner en boton final para evitar doble-click
+- Referencias a /onboarding/confirmacion actualizadas en podcast/page.tsx
+
+**v14 — 7 mejoras de calidad de contenido, narracion e informacion:**
+- Clasificador (classifier.ts): resumenes RICOS (3-4 frases con cifras, nombres, impacto), max_tokens 3072→4096
+- Clasificador: instrucciones especificas para noticias en ingles (nombres propios, fuente, terminologia bilingue, contexto cultural)
+- generate-script.ts: nuevo bloque DATOS QUE IMPACTAN — ancla cada noticia con dato sorprendente (comparacion visual, perspectiva, pregunta retorica, contraste temporal)
+- generate-script.ts: pool de 6 FORMATOS DE EPISODIO aleatorios (clasico, lo mejor/peor, debate interno, countdown, hilo conductor, pregunta del dia)
+- generate-script.ts: bloque ANTI-REPETICION — consulta ultimos 2 episodios del usuario, evita repetir noticias ya cubiertas
+- user-insights.ts: incluye titulos de los 3 episodios favoritos (rating=5) del usuario para mantener estilo que funciono
+- tts-utils.ts: nueva funcion enhanceProsody() — micro-pausas antes de datos impactantes, enfasis en preguntas retoricas, normalizacion de numeros grandes
+- Pipeline ElevenLabs: cleanScriptForTTS → enhanceProsody → preprocessForTTS
+- generate-podcast.ts: query de episodios previos en paralelo con Promise.allSettled (4 queries simultaneas)
+
+**v13 — Optimizacion de rendimiento a fondo:**
+- Dashboard: lazy loading de 4 tabs con dynamic() + ssr:false (code splitting)
+- Dashboard: trending fetch movido al Promise.all inicial (elimina cascada)
+- Dashboard: useMemo/useCallback para evitar re-renders innecesarios
+- generate-podcast.ts: 3 queries DB (profile, insights, trending) en paralelo con Promise.allSettled
+- get-articles.ts: queries candidatos + sorpresa en paralelo con Promise.all (elimina 2a query secuencial)
+- Trending-tab: cache checks batcheados con Promise.all + single setState (era forEach async)
+- Historial-tab: fetch de preferences separado en useEffect unico (no se repite en cada filtro)
+- Cache headers HTTP: trending (public, s-maxage=3600), clips (public, s-maxage=3600), profile/preferences (private, max-age=300)
+- Singleton Supabase clients en API routes (trending, clips) — evita recrear en cada request
+- Fonts: display:"swap" en Inter, Montserrat, Geist Mono para FOIT→FOUT
+
+**v12 — Saludo personalizado en el podcast:**
+- Saludo calido por nombre del oyente (profile.nombre) al inicio del podcast
+- Adaptado por horario (manana/noche), tono (casual/profesional/deep-dive) y variabilidad
+- Si no hay nombre en el perfil, saludo generico cercano
+- Integrado con la estructura narrativa: saludo → gancho → desarrollo
+
+**v11 — Mejora narrativa del guion de podcast:**
+- Estructura narrativa con arco: gancho → desarrollo → respiro → climax → cierre con gancho
+- Profundidad informativa adaptada por duracion: 5min (que+porque), 15min (+contexto), 30min (+prediccion)
+- Bloque de ritmo y energia: variacion de intensidad, pausas dramaticas, segunda persona
+- Aperturas mejoradas: 8 estilos (dato numerico, prediccion, contraste, anecdota...)
+- Transiciones mejoradas: 8 estilos (causa-efecto, temporal, geografico, humor/ironia...)
+- Cierres mejorados: 6 estilos (arco circular, prediccion, pregunta abierta, bomba final...)
+- Noticias con mas contexto: keywords, sentimiento+alcance en linea, resumen extendido (300 chars)
+- Campo `keywords` propagado: Article type → get-articles.ts → prompt de generacion
+- Tratamiento contextualizado de sentiment: negative → perspectiva, positive → matices
+
+**v10 — Trending Clips (clips de 5 min sobre temas polemicos):**
+- Tabla `trending_clips` (migracion 011): cache diario por topic con status generating/ready/error
+- `lib/generate-clip.ts`: busca articulos por topic en processed_news (48h, top 2) y genera script de 5 min
+- `lib/generate-script.ts`: soporte duracion 5 min (2 articulos, 4096 tokens, 20s intro/cierre)
+- `app/api/clips/route.ts`: GET (consultar estado) + POST (generar/recuperar) con thundering herd + rate limit 5/min
+- `components/clip-audio-player.tsx`: reproductor inline (no fixed-bottom), sin metricas, voz femenina por defecto
+- `components/dashboard/trending-tab.tsx`: seccion "Clips del dia" (top 5 excluyendo entertainment/sports) + "Mas trending" (resto)
+- Flujo: primer usuario genera clip → los siguientes lo obtienen cacheado (mismo dia)
+- Badges rojo/naranja para clips (temas polemicos), verde para trending normal
+- Card expandible con preview del script (fade), player inline y fuentes
+
+**v9 — Ampliacion de fuentes + deduplicador v2 + clasificacion enriquecida:**
+- sources.json v2.0: formato plano `{sources: [...]}` con campo `type` (antes `{rss: [], apis: []}`)
+- 19 feeds RSS (antes 8): +11 fuentes nuevas en espanol (elDiario.es, 20 Minutos, El Mundo, El Espanol x2, Europa Press, Genbeta, Newtral, Expansion, Google News IA, Google News Startups)
+- batch_size de procesamiento: 20 → 40 (agent-config.json)
+- Timeout RSS: 10s → 15s para feeds mas lentos
+- User-Agent: `PodcastAI-NewsAgent/1.0` → `WaveCast-NewsAgent/2.0`
+- TOPIC_TO_CATEGORIES: politica-actualidad ahora mapea a `["politics", "general"]` (mas cobertura)
+- Tipos actualizados: `SourceConfig` union type, `SourcesConfig` con metadata (version, description)
+- `sources/index.ts` refactorizado para array plano con filtro por `type`
+- Deduplicador v2: compara titulo (>70%) Y descripcion (>60%), con stopwords es+en
+- Dedup cross-temporal: segunda pasada contra processed_news de ultimas 24h
+- Al encontrar duplicados, se queda con el articulo de descripcion mas larga
+- Pipeline actualizado: pasa cliente Supabase al deduplicador para cross-temporal
+- Tests del deduplicador actualizados para nueva API async + nuevos test cases
+- Clasificacion enriquecida: 3 nuevos campos en processed_news (sentiment, impact_scope, story_id)
+- Migration 010: ALTER TABLE + CHECK constraints + indices parciales (story_idx, sentiment_idx)
+- Prompt del clasificador ampliado con instrucciones detalladas para los 3 nuevos campos
+- max_tokens del clasificador: 4096 → 3072 (optimizado para 9 campos por articulo)
+- Validacion robusta de los 9 campos con defaults (sentiment→neutral, impact_scope→national, story_id→uncategorized)
+- story_id: kebab-case, max 50 chars, agrupa noticias del mismo tema entre batches
+- Selección inteligente de artículos (`get-articles.ts` reescrito):
+  - Paso A: trae 3x candidatos (ARTICLES_BY_DURATION × 3) ordenados por relevancia
+  - Paso B: garantiza 1 noticia top por cada topic del usuario (diversidad temática)
+  - Paso C: max 2 noticias por fuente (diversidad de fuente)
+  - Paso D: descarta noticias con >50% keyword overlap (evita repetición)
+  - Paso E: añade 1 noticia sorpresa fuera de categorías del usuario (relevance >= 8)
+  - Paso F: agrupa por story_id con campo `related_articles` para narración consolidada
+- `fetchFromAgent(topics, duration)` — nueva firma, usa ARTICLES_BY_DURATION internamente
+- Tipo `Article` ampliado con `related_articles?: { title: string; summary: string }[]`
+- `GeneratePodcastResult.articles` usa tipo `Article` (antes inline type)
+- Prompt de guiones mejorado (v3): 4 nuevos bloques contextuales
+  - Bloque A: trending topics del dia (top 3 de trending_topics, consultados desde generate-podcast.ts)
+  - Bloque B: instruccion de conexiones entre noticias (transiciones naturales en vez de bloques aislados)
+  - Bloque C: tono por noticia (sentiment→energia, impact_scope→alcance)
+  - Bloque D: noticias relacionadas por story_id ([RELACIONADAS: ...] en el prompt)
+- Pool SURPRISE_INTROS (4 frases) para introducir la noticia sorpresa del paso E
+- Noticias en el prompt ahora incluyen sentiment, impact_scope y [RELACIONADAS] tags
+- `generateScript()` acepta 2 nuevos parametros: `trending` y `userTopics`
+- `generate-podcast.ts` consulta trending_topics del dia antes de generar guion
+- Tipo `Article` ampliado con `sentiment`, `impact_scope` y `category` opcionales
+- `get-articles.ts` pasa sentiment, impact_scope y category desde ProcessedNewsItem a Article
+
+**v8 — Estetica Spotify + reestructuracion de componentes:**
+- Paleta de colores: navy/cyan → negro puro (#000000) + verde Spotify (#1DB954)
+- Cards: glassmorphism (backdrop-blur) → flat opacos (bg-[#121212], sin blur)
+- Inputs: bg transparente con blur → bg solido (#282828) con focus verde
+- Nav, tab bar, player: fondos solidos (bg-black) sin blur
+- Tipografia: Montserrat (Google Fonts) para headings h1/h2 (weights 600/700/800)
+- PWA manifest actualizado con colores Spotify
+- Dashboard split: 1 archivo de 649 lineas → 5 archivos (163 + 4 tabs)
+- Onboarding split: 1 archivo de 764 lineas → 5 archivos (434 + 4 steps)
+- Landing page: hero, features, CTA con estetica oscura
+- Correccion de ~42 tildes en textos en espanol (sesion, dia, mas, etc.)
+- Error handling mejorado en episode-feedback y adjust-episode
+- Accesibilidad: ARIA tablist/tab/tabpanel en dashboard tabs
+
+**v7 — Nuevas features y automatizacion:**
+- Vercel Cron: 5 tareas programadas (fetch, process, generate, cleanup, digest)
+- Tabla schedules: horarios de generacion automatica por usuario
+- Feedback de episodios: thumbs up/down + tags + comentario
+- Metricas de escucha: completion rate, playback speed
+- User insights: inyeccion de historial de preferencias en prompt de Claude
+- Compartir episodios: pagina publica /shared/[id]
+- Full-text search: tsvector con config 'spanish' + indice GIN + RPC
+- Historial con filtros (tema, tono, fecha) y busqueda integrada
+- Trending topics: tab en dashboard con datos de trending_topics
+- Cache en memoria para articulos (TTL 1 hora)
+- Retry con backoff exponencial (lib/retry.ts)
+- CSRF protection en proxy.ts (Origin header validation)
+- Onboarding enforcement: cookie wavecast_onboarding_complete
+- Logica de generacion extraida a lib/generate-podcast.ts (compartida con cron)
+- Sugerencias de temas basadas en tendencias (POST /api/suggest-topics)
+- 5 nuevas migraciones (005-009)
+
+**v6 — Seguridad, rendimiento, robustez y observabilidad:**
+- Middleware restaurado y activo (proxy.ts, convencion Next.js 16)
+- Rate limiting en API routes (10/min podcast, 5/min audio, por IP)
+- Filtro de 48h en fetchFromAgent (solo noticias frescas) — ahora con selección inteligente (v9)
+- max_tokens dinamico segun duracion (4096/8192/12288)
+- Timeout de 55s en llamadas a Claude (AbortController)
+- Script de limpieza de noticias antiguas (agent:cleanup)
+- HTML sanitizado en renderMarkdown (escapeHtml, prevencion XSS)
+- Paginacion en historial (10 por pagina, "Cargar mas")
+- TOPIC_TO_CATEGORIES centralizado en lib/topics.ts
+- Cliente Anthropic singleton (reutilizado entre peticiones)
 
 **v5 — Bug fixes, validacion, robustez y calidad de codigo:**
 - Markdown renderer: colores tema oscuro → tema claro (text-stone-*)
@@ -933,37 +1432,23 @@ npm run build       # Build completo de produccion
 - Sanitizacion de newlines en prompt (titulo y descripcion de articulos)
 - Log warning en profile catch (en vez de catch silencioso)
 
-**v6 — Seguridad, rendimiento, robustez y observabilidad:**
-- Middleware restaurado y activo (proxy.ts, convencion Next.js 16)
-- Rate limiting en API routes (10/min podcast, 5/min audio, por IP)
-- Filtro de 48h en fetchFromAgent (solo noticias frescas)
-- max_tokens dinamico segun duracion (4096/8192/12288)
-- Timeout de 55s en llamadas a Claude (AbortController)
-- Script de limpieza de noticias antiguas (agent:cleanup)
-- HTML sanitizado en renderMarkdown (escapeHtml, prevencion XSS)
-- Paginacion en historial (10 por pagina, "Cargar mas")
-- TOPIC_TO_CATEGORIES centralizado en lib/topics.ts
-- Cliente Anthropic singleton (reutilizado entre peticiones)
-
 ### 11.3 A medias / con limitaciones
 
 | Feature | Estado |
 |---------|--------|
 | Concatenacion de MP3 cruda | Los chunks de audio se concatenan byte a byte. Puede causar glitches en los cortes. Lo correcto seria usar un muxer MP3. |
-| News Agent sin automatizar | Se ejecuta manualmente con `npm run agent:fetch/process`. Deberia automatizarse con cron o scheduler. |
-| Tabla `trending_topics` | Creada en la migracion pero no se usa activamente en la app. |
+| Rate limiting en memoria | Funciona por instancia serverless en Vercel (no compartido entre instancias). Para produccion robusta seria mejor Redis. |
 
 ### 11.4 TODO — Pendiente
 
 | Tarea | Prioridad |
 |-------|-----------|
-| Automatizar agent:fetch y agent:process con cron/scheduler | Media |
 | Tests unitarios (al menos newsapi.ts, generate-script.ts, elevenlabs.ts) | Media |
 | Dominio custom (solo tiene el dominio automatico de Vercel) | Baja |
-| Usar trending_topics para sugerir temas | Baja |
 | Muxer MP3 para concatenacion correcta de chunks | Baja |
-| Filtros en historial (por tema, tono o fecha) | Baja |
 | Rate limiting persistente (Redis) para Vercel multi-instancia | Baja |
+| Notificaciones push al generar podcast programado | Baja |
+| Dashboard de admin para monitorizar health de fuentes | Baja |
 
 ---
 
@@ -1009,4 +1494,4 @@ Todas las cuentas estan creadas y configuradas en `.env.local`:
 | **NewsAPI.org** | Configurado | Gratis (100 req/dia) | https://newsapi.org |
 | **Vercel** | Configurado | Gratis | https://vercel.com |
 
-Para clonar el proyecto: copiar `.env.example` a `.env.local`, rellenar los valores, y ejecutar las 4 migraciones SQL en el editor de Supabase.
+Para clonar el proyecto: copiar `.env.example` a `.env.local`, rellenar los valores, y ejecutar las 11 migraciones SQL en el editor de Supabase.

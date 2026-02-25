@@ -4,7 +4,7 @@
     "api_interval_minutes": 15
   },
   "processing": {
-    "batch_size": 20,
+    "batch_size": 40,
     "max_age_hours": 48
   },
   "languages": ["es", "en"],

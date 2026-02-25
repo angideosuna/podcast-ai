@@ -1,27 +1,31 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "PodCast.ai — Tu podcast diario personalizado",
+  title: "WaveCast — Tu podcast diario personalizado",
   description:
-    "Genera podcasts diarios hiperpersonalizados con voces AI sobre los temas que te interesan. Noticias, tecnologia, economia y mas.",
+    "Genera podcasts diarios hiperpersonalizados con voces AI sobre los temas que te interesan. Noticias, tecnología, economía y más.",
   keywords: [
     "podcast",
     "IA",
@@ -34,19 +38,19 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "PodCast.ai",
+    title: "WaveCast",
   },
   openGraph: {
-    title: "PodCast.ai — Tu podcast diario personalizado",
+    title: "WaveCast — Tu podcast diario personalizado",
     description:
       "Genera podcasts diarios hiperpersonalizados con voces AI sobre los temas que te interesan.",
     type: "website",
     locale: "es_ES",
-    siteName: "PodCast.ai",
+    siteName: "WaveCast",
   },
   twitter: {
     card: "summary_large_image",
-    title: "PodCast.ai — Tu podcast diario personalizado",
+    title: "WaveCast — Tu podcast diario personalizado",
     description:
       "Genera podcasts diarios hiperpersonalizados con voces AI sobre los temas que te interesan.",
   },
@@ -60,7 +64,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${inter.variable} ${playfair.variable} ${geistMono.variable} antialiased bg-cream`}
+        className={`${inter.variable} ${montserrat.variable} ${geistMono.variable} antialiased bg-cream`}
       >
         {children}
       </body>

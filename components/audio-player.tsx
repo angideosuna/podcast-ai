@@ -179,7 +179,7 @@ export function AudioPlayer({
 
   if (isLoading) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-cream-light/90 backdrop-blur-xl">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black">
         <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 py-4">
           <Loader2 className="h-5 w-5 animate-spin text-forest" />
           <span className="text-sm text-muted">
@@ -192,7 +192,7 @@ export function AudioPlayer({
 
   if (error) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-cream-light/90 backdrop-blur-xl">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black">
         <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 py-4">
           <AlertCircle className="h-5 w-5 text-red-600" />
           <span className="text-sm text-muted">{error}</span>
@@ -213,7 +213,7 @@ export function AudioPlayer({
   if (!audioUrl) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-cream-light/90 backdrop-blur-xl">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black">
       {/* Barra de progreso */}
       <div
         ref={progressRef}
@@ -246,7 +246,7 @@ export function AudioPlayer({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium text-dark">
-            Tu podcast del dia
+            Tu podcast del día
           </span>
           <span className="text-xs text-muted">
             {formatTime(currentTime)} / {formatTime(duration)}

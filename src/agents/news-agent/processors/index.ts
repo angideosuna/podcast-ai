@@ -5,6 +5,7 @@ import { createLogger } from "@/lib/logger";
 import { deduplicate } from "./deduplicator";
 import { classifyWithAI } from "./classifier";
 import { updateTrendingTopics } from "./trending";
+import { getClient } from "../storage/supabase";
 import type { RawNewsItem, ProcessedNewsItem } from "../utils/types";
 
 const log = createLogger("agent:processors");
@@ -20,8 +21,9 @@ export async function processRawNews(
 
   log.info(`Pipeline: ${items.length} noticias raw entrantes`);
 
-  // Paso 1: Deduplicar por título similar
-  const unique = deduplicate(items);
+  // Paso 1: Deduplicar (interna + cross-temporal contra processed_news)
+  const supabase = getClient();
+  const unique = await deduplicate(items, supabase);
 
   // Paso 2: Clasificar con IA
   const classified = await classifyWithAI(unique);

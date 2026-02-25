@@ -7,9 +7,9 @@ import type { FetchResult, RSSSourceConfig, RawNewsItem } from "../utils/types";
 const log = createLogger("agent:rss");
 
 const parser = new Parser({
-  timeout: 10000,
+  timeout: 15000,
   headers: {
-    "User-Agent": "PodcastAI-NewsAgent/1.0",
+    "User-Agent": "WaveCast-NewsAgent/2.0",
     Accept: "application/rss+xml, application/xml, text/xml",
   },
 });

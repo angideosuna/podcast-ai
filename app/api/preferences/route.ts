@@ -33,7 +33,10 @@ export async function GET() {
       throw error;
     }
 
-    return NextResponse.json({ preferences: data || null });
+    return NextResponse.json(
+      { preferences: data || null },
+      { headers: { "Cache-Control": "private, max-age=300" } }
+    );
   } catch (error) {
     log.error("Error obteniendo preferencias", error);
     return NextResponse.json(

@@ -16,7 +16,13 @@ interface ClassificationResult {
   summary: string;
   language: string;
   keywords: string[];
+  sentiment: "positive" | "negative" | "neutral";
+  impact_scope: "local" | "national" | "global";
+  story_id: string;
 }
+
+const VALID_SENTIMENTS = new Set(["positive", "negative", "neutral"]);
+const VALID_SCOPES = new Set(["local", "national", "global"]);
 
 let client: Anthropic | null = null;
 
@@ -54,16 +60,40 @@ Para relevance_score (1-10):
 - 3-4: Noticia menor o muy local
 - 1-2: Contenido irrelevante o spam
 
+Para sentiment:
+- "positive": La noticia tiene un tono positivo (avances, logros, buenas noticias)
+- "negative": La noticia tiene un tono negativo (crisis, conflictos, problemas, desastres)
+- "neutral": La noticia es informativa sin carga emocional clara
+
+Para impact_scope:
+- "local": Afecta a una ciudad, región o comunidad específica
+- "national": Afecta a un país entero
+- "global": Afecta a múltiples países o tiene relevancia internacional
+
+Para story_id:
+- Identificador corto en kebab-case (minúsculas, separado por guiones) que agrupe noticias del mismo tema o historia
+- Máximo 50 caracteres
+- Si dos artículos del batch hablan del mismo tema, DEBEN tener el mismo story_id
+- Ejemplos: "regulacion-ia-ue-2026", "crisis-energetica-europa", "apple-wwdc-2026", "mision-artemis-nasa"
+- Sé consistente: usa el mismo patrón para noticias relacionadas
+
+NOTICIAS EN INGLÉS:
+Si el artículo está en inglés, tu resumen en español DEBE:
+- Mantener los nombres propios en su idioma original (no traducir "Apple" ni "Wall Street")
+- Incluir la fuente entre paréntesis al final: "(según BBC)" o "(reporta The Guardian)"
+- Si hay terminología técnica, poner el término en español Y en inglés entre paréntesis: "cadena de suministro (supply chain)"
+- Aportar contexto cultural si es necesario: si la noticia es sobre política británica, explicar brevemente qué implica para un oyente español
+
 IMPORTANTE: Responde SOLO con el JSON array, sin markdown ni explicaciones.`,
     messages: [
       {
         role: "user",
-        content: `Clasifica estos ${items.length} artículos. Para cada uno devuelve: index, category, relevance_score (1-10), summary (2-3 frases en español), language (es/en), keywords (3-5 palabras clave).
+        content: `Clasifica estos ${items.length} artículos. Para cada uno devuelve: index, category, relevance_score (1-10), summary (resumen RICO en español, 3-4 frases, DEBE incluir datos concretos como cifras/porcentajes/fechas, nombres de personas/empresas/países relevantes, y el impacto práctico — NO resumas genéricamente), language (es/en), keywords (3-5 palabras clave), sentiment (positive/negative/neutral), impact_scope (local/national/global), story_id (kebab-case, max 50 chars).
 
 ${articleList}
 
 Responde SOLO con un JSON array:
-[{"index": 0, "category": "...", "relevance_score": N, "summary": "...", "language": "...", "keywords": ["...", "..."]}, ...]`,
+[{"index": 0, "category": "...", "relevance_score": N, "summary": "...", "language": "...", "keywords": ["..."], "sentiment": "...", "impact_scope": "...", "story_id": "..."}, ...]`,
       },
     ],
   });
@@ -87,6 +117,9 @@ Responde SOLO con un JSON array:
       summary: typeof r.summary === "string" ? r.summary : "Sin resumen",
       language: typeof r.language === "string" ? r.language : "es",
       keywords: Array.isArray(r.keywords) ? r.keywords : [],
+      sentiment: VALID_SENTIMENTS.has(r.sentiment) ? r.sentiment : "neutral",
+      impact_scope: VALID_SCOPES.has(r.impact_scope) ? r.impact_scope : "national",
+      story_id: typeof r.story_id === "string" ? r.story_id.slice(0, 50) : "uncategorized",
     }));
   } catch {
     // Intentar reparar JSON con trailing comma
@@ -94,7 +127,17 @@ Responde SOLO con un JSON array:
       const repaired = cleaned.replace(/,\s*([\]}])/g, "$1");
       const parsed = JSON.parse(repaired);
       const results: ClassificationResult[] = Array.isArray(parsed) ? parsed : [parsed];
-      return results;
+      return results.map((r) => ({
+        index: typeof r.index === "number" ? r.index : 0,
+        category: typeof r.category === "string" ? r.category : "general",
+        relevance_score: typeof r.relevance_score === "number" ? r.relevance_score : 5,
+        summary: typeof r.summary === "string" ? r.summary : "Sin resumen",
+        language: typeof r.language === "string" ? r.language : "es",
+        keywords: Array.isArray(r.keywords) ? r.keywords : [],
+        sentiment: VALID_SENTIMENTS.has(r.sentiment) ? r.sentiment : "neutral",
+        impact_scope: VALID_SCOPES.has(r.impact_scope) ? r.impact_scope : "national",
+        story_id: typeof r.story_id === "string" ? r.story_id.slice(0, 50) : "uncategorized",
+      }));
     } catch {
       log.error("Error parseando respuesta de Claude", cleaned.slice(0, 200));
       return [];
@@ -151,6 +194,9 @@ export async function classifyWithAI(
           relevance_score: score,
           language: result.language || item.language,
           keywords: result.keywords || [],
+          sentiment: result.sentiment,
+          impact_scope: result.impact_scope,
+          story_id: result.story_id,
           url: item.url,
           source_name: item.source_name,
           published_at: item.published_at,

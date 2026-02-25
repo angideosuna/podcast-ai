@@ -24,11 +24,23 @@ export async function getUserInsights(
       return null;
     }
 
-    // Fetch métricas promedio
-    const { data: metrics } = await supabase
-      .from("listening_metrics")
-      .select("completion_rate, playback_speed")
-      .eq("user_id", userId);
+    // Fetch métricas promedio + episodios favoritos en paralelo
+    const [metricsRes, favoritesRes] = await Promise.all([
+      supabase
+        .from("listening_metrics")
+        .select("completion_rate, playback_speed")
+        .eq("user_id", userId),
+      supabase
+        .from("episode_feedback")
+        .select("episodes(title, topics, tone)")
+        .eq("user_id", userId)
+        .eq("rating", 5)
+        .order("created_at", { ascending: false })
+        .limit(3),
+    ]);
+
+    const metrics = metricsRes.data;
+    const favorites = favoritesRes.data;
 
     // Agregar feedbacks
     const positiveFeedbacks = feedbacks.filter((f) => f.rating === 5);
@@ -83,6 +95,21 @@ export async function getUserInsights(
         lines.push(`- Velocidad habitual: ${avgSpeed.toFixed(1)}x (le gusta ritmo rápido)`);
       } else if (avgSpeed < 0.9) {
         lines.push(`- Velocidad habitual: ${avgSpeed.toFixed(1)}x (prefiere ritmo pausado)`);
+      }
+    }
+
+    // Episodios favoritos (rating=5)
+    if (favorites && favorites.length > 0) {
+      const favTitles = favorites
+        .map((f) => {
+          const ep = f.episodes as { title?: string } | null;
+          return ep?.title;
+        })
+        .filter(Boolean);
+      if (favTitles.length > 0) {
+        lines.push(`\nEPISODIOS QUE MÁS LE GUSTARON:`);
+        favTitles.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
+        lines.push(`Intenta mantener el estilo y enfoque que funcionó en estos episodios.`);
       }
     }
 

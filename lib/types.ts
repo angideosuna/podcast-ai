@@ -10,6 +10,11 @@ export interface Article {
   source: string;
   url: string;
   publishedAt: string;
+  related_articles?: { title: string; summary: string }[];
+  sentiment?: "positive" | "negative" | "neutral";
+  impact_scope?: "local" | "national" | "global";
+  category?: string;
+  keywords?: string[];
 }
 
 // ============================================

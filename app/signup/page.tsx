@@ -19,12 +19,12 @@ export default function SignupPage() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Las contrasenas no coinciden");
+      setError("Las contraseñas no coinciden");
       return;
     }
 
     if (password.length < 6) {
-      setError("La contrasena debe tener al menos 6 caracteres");
+      setError("La contraseña debe tener al menos 6 caracteres");
       return;
     }
 
@@ -57,7 +57,7 @@ export default function SignupPage() {
           <div className="text-6xl">📧</div>
           <h1 className="text-2xl font-bold text-forest">Revisa tu email</h1>
           <p className="text-muted">
-            Hemos enviado un enlace de confirmacion a{" "}
+            Hemos enviado un enlace de confirmación a{" "}
             <span className="font-medium text-dark">{email}</span>
           </p>
           <p className="text-sm text-muted-light">
@@ -65,9 +65,9 @@ export default function SignupPage() {
           </p>
           <button
             onClick={() => router.push("/login")}
-            className="cursor-pointer rounded-full border border-white/40 bg-cream-light/80 px-6 py-3 font-medium text-dark/80 transition-all duration-300 hover:border-forest/20 hover:text-forest"
+            className="cursor-pointer rounded-full border border-white/[0.08] bg-cream-light/80 px-6 py-3 font-medium text-dark/80 transition-all duration-300 hover:border-forest/20 hover:text-forest"
           >
-            Ir a iniciar sesion
+            Ir a iniciar sesión
           </button>
         </div>
       </div>
@@ -79,9 +79,8 @@ export default function SignupPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold font-serif">
-            <span className="text-forest">PodCast</span>
-            <span className="text-muted-light">.ai</span>
+          <h1 className="text-3xl font-bold">
+            <span className="text-white">WaveCast</span>
           </h1>
           <p className="mt-2 text-muted">Crea tu cuenta gratuita</p>
         </div>
@@ -111,7 +110,7 @@ export default function SignupPage() {
                 htmlFor="password"
                 className="mb-1.5 block text-sm font-medium text-dark/80"
               >
-                Contrasena
+                Contraseña
               </label>
               <input
                 id="password"
@@ -119,7 +118,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Minimo 6 caracteres"
+                placeholder="Mínimo 6 caracteres"
                 className="glass-input w-full"
               />
             </div>
@@ -128,7 +127,7 @@ export default function SignupPage() {
                 htmlFor="confirmPassword"
                 className="mb-1.5 block text-sm font-medium text-dark/80"
               >
-                Confirmar contrasena
+                Confirmar contraseña
               </label>
               <input
                 id="confirmPassword"
@@ -136,14 +135,14 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                placeholder="Repite la contrasena"
+                placeholder="Repite la contraseña"
                 className="glass-input w-full"
               />
             </div>
           </div>
 
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
               {error}
             </div>
           )}
@@ -163,7 +162,7 @@ export default function SignupPage() {
             href="/login"
             className="text-forest underline transition-colors duration-300 hover:text-forest-light"
           >
-            Inicia sesion
+            Inicia sesión
           </Link>
         </p>
       </div>

@@ -33,7 +33,7 @@ function LoginForm() {
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error al iniciar sesion"
+        err instanceof Error ? err.message : "Error al iniciar sesión"
       );
     } finally {
       setLoading(false);
@@ -44,11 +44,10 @@ function LoginForm() {
     <div className="w-full max-w-md space-y-8">
       {/* Logo */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold font-serif">
-          <span className="text-forest">PodCast</span>
-          <span className="text-muted-light">.ai</span>
+        <h1 className="text-3xl font-bold">
+          <span className="text-white">WaveCast</span>
         </h1>
-        <p className="mt-2 text-muted">Inicia sesion en tu cuenta</p>
+        <p className="mt-2 text-muted">Inicia sesión en tu cuenta</p>
       </div>
 
       {/* Formulario */}
@@ -76,7 +75,7 @@ function LoginForm() {
               htmlFor="password"
               className="mb-1.5 block text-sm font-medium text-dark/80"
             >
-              Contrasena
+              Contraseña
             </label>
             <input
               id="password"
@@ -84,14 +83,14 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="Tu contrasena"
+              placeholder="Tu contraseña"
               className="glass-input w-full"
             />
           </div>
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
         )}
@@ -101,7 +100,7 @@ function LoginForm() {
           disabled={loading}
           className="w-full cursor-pointer rounded-full bg-forest px-6 py-3 font-medium text-white transition-all duration-300 hover:bg-forest-light disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Iniciando sesion..." : "Iniciar sesion"}
+          {loading ? "Iniciando sesión..." : "Iniciar sesión"}
         </button>
       </form>
 
@@ -111,7 +110,7 @@ function LoginForm() {
           href="/signup"
           className="text-forest underline transition-colors duration-300 hover:text-forest-light"
         >
-          Registrate
+          Regístrate
         </Link>
       </p>
     </div>

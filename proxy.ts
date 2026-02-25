@@ -51,7 +51,7 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Rutas protegidas: redirigir a login si no hay sesion
-  const protectedPaths = ["/dashboard", "/historial", "/perfil", "/podcast"];
+  const protectedPaths = ["/dashboard", "/historial"];
   const isProtected = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
@@ -72,6 +72,16 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Onboarding enforcement: authenticated users must complete onboarding
+  if (user && isProtected) {
+    const hasOnboarding = request.cookies.get("wavecast_onboarding_complete");
+    if (!hasOnboarding) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

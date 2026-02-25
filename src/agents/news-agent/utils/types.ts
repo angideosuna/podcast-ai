@@ -36,6 +36,9 @@ export interface ProcessedNewsItem {
   relevance_score: number; // 1-10
   language: string;
   keywords: string[];
+  sentiment: "positive" | "negative" | "neutral";
+  impact_scope: "local" | "national" | "global";
+  story_id: string;
   url: string;
   source_name: string;
   published_at: string | null;
@@ -84,6 +87,7 @@ export interface SourceHealth {
 export interface RSSSourceConfig {
   id: string;
   name: string;
+  type: "rss";
   url: string;
   language: string;
   category: string;
@@ -93,14 +97,20 @@ export interface RSSSourceConfig {
 export interface APISourceConfig {
   id: string;
   name: string;
-  type: string;
+  type: "newsapi";
+  url: string;
+  language: string;
   enabled: boolean;
   categories: string[];
 }
 
+export type SourceConfig = RSSSourceConfig | APISourceConfig;
+
 export interface SourcesConfig {
-  rss: RSSSourceConfig[];
-  apis: APISourceConfig[];
+  version: string;
+  updated_at: string;
+  description: string;
+  sources: SourceConfig[];
 }
 
 // ============================================

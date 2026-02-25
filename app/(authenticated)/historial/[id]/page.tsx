@@ -49,7 +49,7 @@ export default function EpisodeDetailPage() {
         .single();
 
       if (error || !data) {
-        router.push("/historial");
+        router.push("/dashboard");
         return;
       }
 
@@ -146,11 +146,11 @@ export default function EpisodeDetailPage() {
       <div className="mx-auto max-w-3xl">
         {/* Volver */}
         <Link
-          href="/historial"
+          href="/dashboard"
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-all duration-300 hover:text-forest"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver al historial
+          Volver al dashboard
         </Link>
 
         {/* Header */}
@@ -237,7 +237,7 @@ export default function EpisodeDetailPage() {
               {episode.articles.map((article, i) => (
                 <li
                   key={i}
-                  className="border-b border-white/30 pb-3 last:border-0 last:pb-0"
+                  className="border-b border-white/[0.08] pb-3 last:border-0 last:pb-0"
                 >
                   <a
                     href={article.url}

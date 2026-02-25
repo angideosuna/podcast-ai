@@ -53,6 +53,29 @@ export function preprocessForTTS(script: string): string {
 }
 
 /**
+ * Mejora la prosodia del texto para TTS (ElevenLabs Multilingual v2).
+ * Añade micro-pausas, énfasis y normaliza números para mejor entonación.
+ */
+export function enhanceProsody(text: string): string {
+  let enhanced = text;
+
+  // Añadir micro-pausas antes de datos impactantes (después de "fijaos", "atención", "ojo", etc.)
+  enhanced = enhanced.replace(/(fijaos|atención|ojo|escuchad esto|preparaos)/gi, "$1...");
+
+  // Añadir énfasis en preguntas retóricas (asegurar que terminan con ?)
+  enhanced = enhanced.replace(/¿([^?]+)(?:\.|$)/gm, "¿$1?");
+
+  // Convertir números grandes a forma hablada para mejor pronunciación
+  enhanced = enhanced.replace(/1\.000\.000/g, "un millón");
+  enhanced = enhanced.replace(/1\.000/g, "mil");
+
+  // Asegurar pausa después de "..." (normalizar múltiples puntos)
+  enhanced = enhanced.replace(/\.{4,}/g, "...");
+
+  return enhanced;
+}
+
+/**
  * Limpia el guion Markdown para que suene natural en TTS.
  * Elimina headers, bold, separadores, anotaciones de tiempo, emojis, etc.
  */

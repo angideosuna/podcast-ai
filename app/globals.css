@@ -6,19 +6,19 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --font-serif: var(--font-playfair);
+  --font-heading: var(--font-montserrat);
   --font-mono: var(--font-geist-mono);
 
-  /* ── Paleta premium orgánica ── */
-  --color-forest: #1A3C34;
-  --color-forest-light: #2A5C4A;
-  --color-mint: #4ECDC4;
-  --color-cream: #F5F0EB;
-  --color-cream-light: #FAFAF7;
-  --color-cream-dark: #E8E0D8;
-  --color-dark: #1A1A1A;
-  --color-muted: #6B6B6B;
-  --color-muted-light: #9B9B9B;
+  /* ── Paleta WaveCast Spotify ── */
+  --color-forest: #1DB954;
+  --color-forest-light: #1ed760;
+  --color-mint: #1ed760;
+  --color-cream: #000000;
+  --color-cream-light: #121212;
+  --color-cream-dark: #282828;
+  --color-dark: #FFFFFF;
+  --color-muted: #B3B3B3;
+  --color-muted-light: #727272;
 
   /* ── shadcn overrides ── */
   --color-sidebar-ring: var(--sidebar-ring);
@@ -63,37 +63,38 @@ body {
 }
 
 :root {
+  color-scheme: dark;
   --radius: 0.75rem;
-  --background: #F5F0EB;
-  --foreground: #1A1A1A;
-  --card: #FAFAF7;
-  --card-foreground: #1A1A1A;
-  --popover: #FAFAF7;
-  --popover-foreground: #1A1A1A;
-  --primary: #1A3C34;
-  --primary-foreground: #FAFAF7;
-  --secondary: #E8E0D8;
-  --secondary-foreground: #1A3C34;
-  --muted-foreground: #6B6B6B;
-  --accent: #E8E0D8;
-  --accent-foreground: #1A3C34;
+  --background: #000000;
+  --foreground: #FFFFFF;
+  --card: #121212;
+  --card-foreground: #FFFFFF;
+  --popover: #282828;
+  --popover-foreground: #FFFFFF;
+  --primary: #1DB954;
+  --primary-foreground: #000000;
+  --secondary: #282828;
+  --secondary-foreground: #1DB954;
+  --muted-foreground: #B3B3B3;
+  --accent: #282828;
+  --accent-foreground: #1DB954;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: rgba(255, 255, 255, 0.35);
-  --input: rgba(255, 255, 255, 0.35);
-  --ring: #4ECDC4;
-  --chart-1: #1A3C34;
-  --chart-2: #4ECDC4;
-  --chart-3: #2A5C4A;
-  --chart-4: #E8E0D8;
-  --chart-5: #6B6B6B;
-  --sidebar: #F5F0EB;
-  --sidebar-foreground: #1A1A1A;
-  --sidebar-primary: #1A3C34;
-  --sidebar-primary-foreground: #FAFAF7;
-  --sidebar-accent: #E8E0D8;
-  --sidebar-accent-foreground: #1A3C34;
-  --sidebar-border: rgba(255, 255, 255, 0.35);
-  --sidebar-ring: #4ECDC4;
+  --border: rgba(255, 255, 255, 0.10);
+  --input: rgba(255, 255, 255, 0.10);
+  --ring: #1DB954;
+  --chart-1: #1DB954;
+  --chart-2: #1ed760;
+  --chart-3: #169c46;
+  --chart-4: #282828;
+  --chart-5: #B3B3B3;
+  --sidebar: #000000;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #1DB954;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #282828;
+  --sidebar-accent-foreground: #1DB954;
+  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-ring: #1DB954;
 }
 
 @layer base {
@@ -104,7 +105,7 @@ body {
     @apply bg-cream text-dark;
   }
   h1, h2 {
-    @apply tracking-tight font-serif;
+    @apply tracking-tight font-[family-name:var(--font-heading),var(--font-sans)] font-bold;
   }
   h3, h4, h5, h6 {
     @apply tracking-tight;
@@ -114,27 +115,33 @@ body {
   }
 }
 
-/* ── Glassmorphism cards ── */
+/* ── Flat cards (Spotify style) ── */
 @layer components {
   .glass-card {
-    @apply bg-cream-light/80 backdrop-blur-xl border border-white/40 rounded-2xl shadow-lg shadow-black/[0.03];
+    @apply bg-[#121212] border border-white/10 rounded-lg shadow-lg shadow-black/[0.2];
   }
   .glass-input {
-    @apply bg-cream-light/60 backdrop-blur-sm border border-white/40 rounded-xl px-4 py-2.5 text-dark placeholder-muted-light transition-all duration-300 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-mint/20;
+    @apply bg-[#282828] border border-white/10 rounded-lg px-4 py-2.5 text-dark placeholder-muted-light transition-all duration-300 focus:border-[#1DB954]/40 focus:outline-none focus:ring-2 focus:ring-[#1DB954]/20;
   }
+}
+
+/* ── Select option styling for dark mode ── */
+select option {
+  background-color: #282828;
+  color: #FFFFFF;
 }
 
 /* ── Prose overrides for script rendering ── */
 .prose h1, .prose h2, .prose h3 {
-  color: #1A3C34;
+  color: #1DB954;
 }
 .prose p, .prose li {
-  color: #1A1A1A;
+  color: #FFFFFF;
 }
 .prose strong {
-  color: #1A3C34;
+  color: #1ed760;
 }
 .prose a {
-  color: #1A3C34;
+  color: #1DB954;
   text-decoration: underline;
 }

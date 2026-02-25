@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Shared mock for messages.create
-const mockCreate = vi.fn().mockResolvedValue({
-  content: [{ type: "text", text: "# Guion fake del podcast\n\nContenido de prueba." }],
+// Shared mock for messages.stream (returns object with finalMessage())
+const mockStream = vi.fn().mockReturnValue({
+  finalMessage: () => Promise.resolve({
+    content: [{ type: "text", text: "# Guion fake del podcast\n\nContenido de prueba." }],
+  }),
 });
 
 // Mock Anthropic SDK as a class constructor
 vi.mock("@anthropic-ai/sdk", () => {
   return {
     default: class MockAnthropic {
-      messages = { create: mockCreate };
+      messages = { stream: mockStream };
     },
   };
 });
@@ -76,7 +78,7 @@ describe("ARTICLES_BY_DURATION", () => {
 
 describe("generateScript", () => {
   beforeEach(() => {
-    mockCreate.mockClear();
+    mockStream.mockClear();
   });
 
   it("includes PERFIL DEL OYENTE when profile is provided", async () => {
@@ -85,7 +87,7 @@ describe("generateScript", () => {
 
     await generateScript(articles, 15, "casual", undefined, profile);
 
-    const callArgs = mockCreate.mock.calls[0][0];
+    const callArgs = mockStream.mock.calls[0][0];
     const userContent = callArgs.messages[0].content;
 
     expect(userContent).toContain("PERFIL DEL OYENTE");
@@ -97,7 +99,7 @@ describe("generateScript", () => {
 
     await generateScript(articles, 15, "casual", undefined, null);
 
-    const callArgs = mockCreate.mock.calls[0][0];
+    const callArgs = mockStream.mock.calls[0][0];
     const userContent = callArgs.messages[0].content;
 
     expect(userContent).not.toContain("PERFIL DEL OYENTE");
@@ -108,7 +110,7 @@ describe("generateScript", () => {
 
     await generateScript(articles, 15, "casual");
 
-    const callArgs = mockCreate.mock.calls[0][0];
+    const callArgs = mockStream.mock.calls[0][0];
     const userContent = callArgs.messages[0].content;
 
     expect(userContent).toContain("Noticia de prueba 1");
@@ -120,7 +122,7 @@ describe("generateScript", () => {
 
     await generateScript(articles, 15, "casual");
 
-    const callArgs = mockCreate.mock.calls[0][0];
+    const callArgs = mockStream.mock.calls[0][0];
     const userContent = callArgs.messages[0].content;
 
     // Should include articles 1-5 (ARTICLES_BY_DURATION[15] = 5)
@@ -134,7 +136,7 @@ describe("generateScript", () => {
 
     await generateScript(articles, 15, "casual");
 
-    const callArgs = mockCreate.mock.calls[0][0];
+    const callArgs = mockStream.mock.calls[0][0];
     expect(callArgs.max_tokens).toBe(8192);
   });
 
@@ -143,7 +145,7 @@ describe("generateScript", () => {
 
     await generateScript(articles, 30, "profesional");
 
-    const callArgs = mockCreate.mock.calls[0][0];
+    const callArgs = mockStream.mock.calls[0][0];
     expect(callArgs.max_tokens).toBe(12288);
   });
 
@@ -152,7 +154,7 @@ describe("generateScript", () => {
 
     await generateScript(articles, 60, "deep-dive");
 
-    const callArgs = mockCreate.mock.calls[0][0];
+    const callArgs = mockStream.mock.calls[0][0];
     expect(callArgs.max_tokens).toBe(16384);
   });
 
@@ -161,7 +163,7 @@ describe("generateScript", () => {
 
     await generateScript(articles, 15, "casual", "Habla mas sobre IA");
 
-    const callArgs = mockCreate.mock.calls[0][0];
+    const callArgs = mockStream.mock.calls[0][0];
     const userContent = callArgs.messages[0].content;
     expect(userContent).toContain("AJUSTES DEL USUARIO");
     expect(userContent).toContain("Habla mas sobre IA");
@@ -170,31 +172,39 @@ describe("generateScript", () => {
   it("retries on transient error and succeeds", async () => {
     const articles = makeArticles(5);
 
-    mockCreate
-      .mockRejectedValueOnce(new Error("fetch failed"))
-      .mockResolvedValueOnce({
-        content: [{ type: "text", text: "Recovered script" }],
+    mockStream
+      .mockReturnValueOnce({
+        finalMessage: () => Promise.reject(new Error("fetch failed")),
+      })
+      .mockReturnValueOnce({
+        finalMessage: () => Promise.resolve({
+          content: [{ type: "text", text: "Recovered script" }],
+        }),
       });
 
     const result = await generateScript(articles, 15, "casual");
     expect(result).toBe("Recovered script");
-    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(mockStream).toHaveBeenCalledTimes(2);
   });
 
   it("does not retry on non-transient error (e.g. 401)", async () => {
     const articles = makeArticles(5);
 
-    mockCreate.mockRejectedValue(new Error("Error 401: unauthorized"));
+    mockStream.mockReturnValue({
+      finalMessage: () => Promise.reject(new Error("Error 401: unauthorized")),
+    });
 
     await expect(generateScript(articles, 15, "casual")).rejects.toThrow("401");
-    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockStream).toHaveBeenCalledTimes(1);
   });
 
   it("throws when Claude returns no text block", async () => {
     const articles = makeArticles(5);
 
-    mockCreate.mockResolvedValue({
-      content: [{ type: "tool_use", id: "123" }],
+    mockStream.mockReturnValue({
+      finalMessage: () => Promise.resolve({
+        content: [{ type: "tool_use", id: "123" }],
+      }),
     });
 
     await expect(generateScript(articles, 15, "casual")).rejects.toThrow(

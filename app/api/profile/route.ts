@@ -24,15 +24,16 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("nombre, empresa, rol, sector, edad, ciudad, nivel_conocimiento, objetivo_podcast, horario_escucha, periodicidad, dias_personalizados, survey_completed")
+      .select("nombre, empresa, rol, sector, edad, ciudad, nivel_conocimiento, objetivo_podcast, horario_escucha, survey_completed")
       .eq("id", user.id)
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json({
-      profile: { ...data, email: user.email },
-    });
+    return NextResponse.json(
+      { profile: { ...data, email: user.email } },
+      { headers: { "Cache-Control": "private, max-age=300" } }
+    );
   } catch (error) {
     log.error("Error obteniendo perfil", error);
     return NextResponse.json(
@@ -67,8 +68,6 @@ export async function POST(request: Request) {
       nivel_conocimiento,
       objetivo_podcast,
       horario_escucha,
-      periodicidad,
-      dias_personalizados,
       survey_completed,
     } = body;
 
@@ -82,8 +81,6 @@ export async function POST(request: Request) {
       nivel_conocimiento,
       objetivo_podcast,
       horario_escucha,
-      periodicidad,
-      dias_personalizados,
       updated_at: new Date().toISOString(),
     };
 

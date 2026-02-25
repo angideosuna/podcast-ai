@@ -5,6 +5,7 @@ import { fetchFromAgent } from "@/src/agents/news-agent/storage/get-articles";
 import { generateScript, ARTICLES_BY_DURATION } from "@/lib/generate-script";
 import { getUserInsights } from "@/lib/user-insights";
 import { createLogger } from "@/lib/logger";
+import type { Article } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const log = createLogger("generate-podcast");
@@ -20,7 +21,7 @@ export interface GeneratePodcastParams {
 
 export interface GeneratePodcastResult {
   script: string;
-  articles: { title: string; description: string; source: string; url: string; publishedAt: string }[];
+  articles: Article[];
   episodeId: string | null;
   generatedAt: string;
 }
@@ -28,9 +29,9 @@ export interface GeneratePodcastResult {
 export async function generatePodcast(params: GeneratePodcastParams): Promise<GeneratePodcastResult> {
   const { topics, duration, tone, adjustments, userId, supabase } = params;
 
-  // Paso 1: Buscar noticias — primero del News Agent, fallback a GNews
+  // Paso 1: Buscar noticias — primero del News Agent (selección inteligente), fallback a GNews
   const minArticles = ARTICLES_BY_DURATION[duration] || 5;
-  let articles = await fetchFromAgent(topics, minArticles + 2);
+  let articles = await fetchFromAgent(topics, duration);
   let source: "agent" | "gnews" = "agent";
 
   if (articles.length < minArticles) {
@@ -52,32 +53,60 @@ export async function generatePodcast(params: GeneratePodcastParams): Promise<Ge
 
   log.info(`Usando ${articles.length} artículos de ${source}`);
 
-  // Paso 2: Obtener perfil del usuario
-  let profile: Record<string, string | null> | null = null;
-  try {
-    const { data: profileData } = await supabase
+  // Paso 2: Obtener perfil, insights y trending en paralelo (3 queries independientes)
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const [profileResult, insightsResult, trendingResult, prevEpisodesResult] = await Promise.allSettled([
+    supabase
       .from("profiles")
       .select("nombre, rol, sector, edad, ciudad, nivel_conocimiento, objetivo_podcast, horario_escucha")
       .eq("id", userId)
-      .single();
+      .single(),
+    getUserInsights(userId, supabase),
+    supabase
+      .from("trending_topics")
+      .select("topic, score, article_count, category")
+      .eq("date", todayStr)
+      .order("score", { ascending: false })
+      .limit(3),
+    supabase
+      .from("episodes")
+      .select("title, topics")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(2),
+  ]);
 
-    if (profileData) {
-      profile = profileData as Record<string, string | null>;
-    }
-  } catch (profileError) {
-    log.warn("No se pudo cargar el perfil del usuario", profileError);
+  let profile: Record<string, string | null> | null = null;
+  if (profileResult.status === "fulfilled" && profileResult.value.data) {
+    profile = profileResult.value.data as Record<string, string | null>;
+  } else if (profileResult.status === "rejected") {
+    log.warn("No se pudo cargar el perfil del usuario", profileResult.reason);
   }
 
-  // Paso 3: Obtener insights del usuario (historial de feedback)
   let insights: string | null = null;
-  try {
-    insights = await getUserInsights(userId, supabase);
-  } catch (insightsError) {
-    log.warn("No se pudieron obtener insights del usuario", insightsError);
+  if (insightsResult.status === "fulfilled") {
+    insights = insightsResult.value;
+  } else {
+    log.warn("No se pudieron obtener insights del usuario", insightsResult.reason);
+  }
+
+  let trending: { topic: string; score: number; article_count: number; category: string | null }[] | null = null;
+  if (trendingResult.status === "fulfilled" && trendingResult.value.data?.length) {
+    trending = trendingResult.value.data;
+    log.info(`Trending topics: ${trending.map((t) => t.topic).join(", ")}`);
+  } else if (trendingResult.status === "rejected") {
+    log.warn("No se pudieron obtener trending topics", trendingResult.reason);
+  }
+
+  let previousEpisodes: { title: string; topics: string[] }[] | null = null;
+  if (prevEpisodesResult.status === "fulfilled" && prevEpisodesResult.value.data?.length) {
+    previousEpisodes = prevEpisodesResult.value.data;
+    log.info(`Previous episodes: ${previousEpisodes.map((e) => e.title).join(", ")}`);
   }
 
   // Paso 4: Generar el guion con Claude
-  const script = await generateScript(articles, duration, tone, adjustments, profile, insights);
+  const script = await generateScript(articles, duration, tone, adjustments, profile, insights, trending, topics, previousEpisodes);
 
   const selectedArticles = articles.slice(0, minArticles);
 

@@ -145,7 +145,7 @@ export function BrowserAudioPlayer({ script, voice, episodeId }: BrowserAudioPla
   if (!voicesLoaded) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-cream-light/90 backdrop-blur-xl">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black">
       <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-3">
         {isPlaying ? (
           <button

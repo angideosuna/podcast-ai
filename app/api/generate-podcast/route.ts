@@ -8,7 +8,7 @@ import { ALL_SUBTOPIC_IDS } from "@/lib/topics";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 import { generatePodcast } from "@/lib/generate-podcast";
 
-export const maxDuration = 60; // Permite hasta 60s en Vercel (Claude puede tardar 20-40s)
+export const maxDuration = 300; // 5 min — Claude tarda 40-120s según la duración del guion
 
 const log = createLogger("api/generate-podcast");
 

@@ -27,6 +27,7 @@ export function EpisodeFeedback({ episodeId }: EpisodeFeedbackProps) {
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -38,8 +39,9 @@ export function EpisodeFeedback({ episodeId }: EpisodeFeedbackProps) {
     if (!rating) return;
     setSending(true);
 
+    setError(null);
     try {
-      await fetch("/api/feedback", {
+      const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -49,9 +51,10 @@ export function EpisodeFeedback({ episodeId }: EpisodeFeedbackProps) {
           comment: comment.trim() || undefined,
         }),
       });
+      if (!res.ok) throw new Error();
       setSubmitted(true);
     } catch {
-      // Silencioso
+      setError("No se pudo enviar el feedback. Inténtalo de nuevo.");
     } finally {
       setSending(false);
     }
@@ -89,8 +92,8 @@ export function EpisodeFeedback({ episodeId }: EpisodeFeedbackProps) {
           onClick={() => { setRating(1); setSelectedTags([]); }}
           className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl transition-all duration-300 ${
             rating === 1
-              ? "bg-red-100 ring-2 ring-red-400 scale-110"
-              : "bg-cream-dark/50 hover:bg-red-50"
+              ? "bg-red-500/15 ring-2 ring-red-400 scale-110"
+              : "bg-cream-dark/50 hover:bg-red-500/10"
           }`}
         >
           👎
@@ -124,6 +127,9 @@ export function EpisodeFeedback({ episodeId }: EpisodeFeedbackProps) {
             placeholder="¿Algo más? (opcional)"
             className="glass-input w-full text-sm"
           />
+
+          {/* Error */}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           {/* Submit */}
           <button

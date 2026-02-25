@@ -1,6 +1,6 @@
 // Integración con ElevenLabs para generar audio del podcast
 
-import { cleanScriptForTTS, preprocessForTTS } from "@/lib/tts-utils";
+import { cleanScriptForTTS, preprocessForTTS, enhanceProsody } from "@/lib/tts-utils";
 import { createLogger } from "@/lib/logger";
 import { withRetry } from "@/lib/retry";
 
@@ -234,7 +234,7 @@ export async function generateAudio(script: string, voice?: string): Promise<Buf
   // Seleccionar voz según preferencia del usuario
   const voiceId = process.env.ELEVENLABS_VOICE_ID || (voice && VOICE_IDS[voice]) || DEFAULT_VOICE_ID;
   log.info(`Generando audio con voz ${voice || "default"} (ID: ${voiceId})`);
-  const cleanedScript = preprocessForTTS(cleanScriptForTTS(script));
+  const cleanedScript = preprocessForTTS(enhanceProsody(cleanScriptForTTS(script)));
 
   // Si el texto cabe en una sola petición, generar directamente
   if (cleanedScript.length <= MAX_CHARS_PER_REQUEST) {

@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const episode = await getSharedEpisode(id);
 
   if (!episode) {
-    return { title: "Episodio no encontrado — PodCast.ai" };
+    return { title: "Episodio no encontrado — WaveCast" };
   }
 
   const topicNames = episode.topics
@@ -39,14 +39,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .join(", ");
 
   return {
-    title: `${episode.title} — PodCast.ai`,
+    title: `${episode.title} — WaveCast`,
     description: `Podcast sobre ${topicNames} · ${episode.duration} min · Generado con IA`,
     openGraph: {
       title: episode.title,
       description: `Podcast sobre ${topicNames} · ${episode.duration} min`,
       type: "article",
       locale: "es_ES",
-      siteName: "PodCast.ai",
+      siteName: "WaveCast",
     },
     twitter: {
       card: "summary",
@@ -73,7 +73,7 @@ export default async function SharedEpisodePage({ params }: Props) {
             href="/"
             className="inline-block text-xl font-bold text-forest transition-colors hover:text-forest-light"
           >
-            🎙️ PodCast.ai
+            🎙️ WaveCast
           </Link>
           <p className="mt-1 text-xs text-muted">
             Podcast generado con inteligencia artificial
@@ -125,7 +125,7 @@ export default async function SharedEpisodePage({ params }: Props) {
               {episode.articles.map((article: { title: string; url: string; source: string; publishedAt: string }, i: number) => (
                 <li
                   key={i}
-                  className="border-b border-white/30 pb-3 last:border-0 last:pb-0"
+                  className="border-b border-white/[0.08] pb-3 last:border-0 last:pb-0"
                 >
                   <a
                     href={article.url}

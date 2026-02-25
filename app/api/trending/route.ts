@@ -1,19 +1,26 @@
 // GET /api/trending — returns today's trending topics (public, cached 1h)
 
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-export async function GET() {
+let supabaseClient: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient | null {
+  if (supabaseClient) return supabaseClient;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !key) {
-    return NextResponse.json({ error: "Server config error" }, { status: 500 });
-  }
-
-  const supabase = createClient(url, key, {
+  if (!url || !key) return null;
+  supabaseClient = createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+  return supabaseClient;
+}
+
+export async function GET() {
+  const supabase = getSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: "Server config error" }, { status: 500 });
+  }
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -32,7 +39,7 @@ export async function GET() {
     { trending: data || [] },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=3600",
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
       },
     }
   );

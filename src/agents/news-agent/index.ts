@@ -122,8 +122,9 @@ export class NewsAgent {
 
   getSourcesList(): { rss: number; apis: number; total: number } {
     const sources = getSourcesConfig();
-    const rss = sources.rss.filter((s) => s.enabled).length;
-    const apis = sources.apis.filter((s) => s.enabled).length;
+    const enabled = sources.sources.filter((s) => s.enabled);
+    const rss = enabled.filter((s) => s.type === "rss").length;
+    const apis = enabled.filter((s) => s.type === "newsapi").length;
     return { rss, apis, total: rss + apis };
   }
 }
