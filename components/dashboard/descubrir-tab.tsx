@@ -52,14 +52,14 @@ const EXCLUDED_CATEGORIES = ["entertainment", "sports"];
 // ─── Clip thumbnail by news-agent category ────────────────
 
 const CLIP_GRADIENTS: Record<string, string> = {
-  technology: "from-[#7C3AED] to-[#6D28D9]",
-  science: "from-[#06B6D4] to-[#0891B2]",
-  business: "from-[#F97316] to-[#EA580C]",
-  health: "from-emerald-500 to-[#06B6D4]",
-  politics: "from-[#F97316] to-red-600",
-  entertainment: "from-pink-500 to-[#7C3AED]",
-  sports: "from-amber-500 to-[#F97316]",
-  general: "from-[#7C3AED] to-[#A855F7]",
+  technology: "from-[#E07856] to-[#C96A4A]",
+  science: "from-[#9B7B8E] to-[#7A5F70]",
+  business: "from-[#D4A574] to-[#B8895C]",
+  health: "from-[#9B7B8E] to-[#D4A574]",
+  politics: "from-[#E07856] to-[#9B7B8E]",
+  entertainment: "from-[#D4A574] to-[#E07856]",
+  sports: "from-[#D4A574] to-[#C96A4A]",
+  general: "from-[#E07856] to-[#D4A574]",
 };
 
 const CLIP_ICONS: Record<string, LucideIcon> = {
@@ -75,7 +75,7 @@ const CLIP_ICONS: Record<string, LucideIcon> = {
 
 function ClipThumbnail({ category }: { category: string | null }) {
   const cat = (category || "general").toLowerCase();
-  const gradient = CLIP_GRADIENTS[cat] || "from-gray-600 to-gray-800";
+  const gradient = CLIP_GRADIENTS[cat] || "from-[#6B5D54] to-[#1A1614]";
   const Icon = CLIP_ICONS[cat] || Radio;
   return (
     <div className={`h-14 w-14 flex-shrink-0 rounded-2xl bg-gradient-to-br ${gradient} relative flex items-center justify-center overflow-hidden`}>
@@ -86,7 +86,7 @@ function ClipThumbnail({ category }: { category: string | null }) {
           backgroundSize: "8px 8px",
         }}
       />
-      <Icon size={20} className="relative z-10 text-white/80" />
+      <Icon size={20} className="relative z-10 text-white/80" strokeWidth={1.5} />
     </div>
   );
 }
@@ -318,27 +318,27 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
     const state = getClipState(t.topic);
     const isExpanded = expandedTopic === t.topic;
     const cat = (t.category || "general").toLowerCase();
-    const gradient = CLIP_GRADIENTS[cat] || "from-gray-600 to-gray-800";
+    const gradient = CLIP_GRADIENTS[cat] || "from-[#6B5D54] to-[#1A1614]";
 
     return (
-      <div key={t.topic} className={`overflow-hidden rounded-3xl bg-white border border-[#E5E7EB] backdrop-blur-md transition-all duration-200 hover:scale-[1.02] ${isHero ? "row-span-2" : ""}`}>
+      <div key={t.topic} className={`overflow-hidden rounded-3xl bg-white/40 backdrop-blur-xl transition-all duration-500 ease-out hover:scale-[1.02] ${isHero ? "row-span-2" : ""}`}>
         {/* Visual header with gradient */}
         <div className={`relative overflow-hidden bg-gradient-to-br ${gradient} ${isHero ? "h-[160px]" : "h-[80px]"} flex items-end p-4`}>
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "10px 10px" }} />
           {/* Rank badge */}
-          <span className={`absolute top-3 left-3 flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-bold ${
-            rank === 1 ? "bg-yellow-400 text-black" : rank === 2 ? "bg-gray-300 text-black" : rank === 3 ? "bg-amber-600 text-white" : "bg-black/40 text-white"
+          <span className={`absolute top-3 left-3 flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-medium ${
+            rank === 1 ? "bg-[#D4A574] text-white" : rank === 2 ? "bg-[#E8DFD3] text-[#1A1614]" : rank === 3 ? "bg-[#9B7B8E] text-white" : "bg-black/30 text-white"
           }`}>
             {rank}
           </span>
-          <h3 className={`relative z-10 font-extrabold leading-tight text-white ${isHero ? "text-xl" : "text-[15px]"}`}>
+          <h3 className={`relative z-10 leading-tight text-white ${isHero ? "text-xl" : "text-[15px]"}`} style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}>
             {t.topic}
           </h3>
         </div>
 
         {/* Content */}
         <div className="p-4">
-          <p className="text-[13px] text-[#6B7280]">
+          <p className="text-[13px] text-[#6B5D54]">
             {t.article_count} {t.article_count === 1 ? "artículo" : "artículos"}
             {t.category ? ` · ${t.category}` : ""}
           </p>
@@ -348,15 +348,15 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
             {state.status === "idle" && (
               <button
                 onClick={() => handleGenerate(t.topic)}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full bg-[#7C3AED] px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-[#A855F7] hover:scale-105"
+                className="flex cursor-pointer items-center gap-1.5 rounded-full bg-[#E07856] px-4 py-2 text-[13px] font-medium text-white transition-all duration-500 ease-out hover:bg-[#C96A4A] hover:scale-105"
               >
-                <Play className="h-3.5 w-3.5 fill-white" />
+                <Play className="h-3.5 w-3.5 fill-white" strokeWidth={1.5} />
                 Generar clip
               </button>
             )}
 
             {state.status === "generating" && (
-              <span className="flex items-center gap-1.5 rounded-full bg-[#7C3AED]/15 px-4 py-2 text-[13px] font-medium text-[#7C3AED]">
+              <span className="flex items-center gap-1.5 rounded-full bg-[#E07856]/10 px-4 py-2 text-[13px] font-medium text-[#E07856]">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Generando...
               </span>
@@ -365,12 +365,12 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
             {state.status === "ready" && (
               <button
                 onClick={() => setExpandedTopic(isExpanded ? null : t.topic)}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full bg-[#7C3AED] px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-[#A855F7] hover:scale-105"
+                className="flex cursor-pointer items-center gap-1.5 rounded-full bg-[#E07856] px-4 py-2 text-[13px] font-medium text-white transition-all duration-500 ease-out hover:bg-[#C96A4A] hover:scale-105"
               >
                 {isExpanded ? (
-                  <><ChevronUp className="h-3.5 w-3.5" /> Cerrar</>
+                  <><ChevronUp className="h-3.5 w-3.5" strokeWidth={1.5} /> Cerrar</>
                 ) : (
-                  <><Play className="h-3.5 w-3.5 fill-white" /> Reproducir</>
+                  <><Play className="h-3.5 w-3.5 fill-white" strokeWidth={1.5} /> Reproducir</>
                 )}
               </button>
             )}
@@ -378,9 +378,9 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
             {state.status === "error" && (
               <button
                 onClick={() => handleGenerate(t.topic)}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full bg-red-500/10 px-4 py-2 text-[13px] font-semibold text-red-400 transition-colors hover:bg-red-500/20"
+                className="flex cursor-pointer items-center gap-1.5 rounded-full bg-[#E07856]/10 px-4 py-2 text-[13px] font-medium text-[#E07856] transition-all duration-500 ease-out hover:bg-[#E07856]/20"
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} />
                 Reintentar
               </button>
             )}
@@ -393,21 +393,21 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
 
         {/* Expanded: script preview + player + fuentes */}
         {isExpanded && state.status === "ready" && state.clip && (
-          <div className="space-y-4 border-t border-[#E5E7EB] px-4 pb-4 pt-4">
+          <div className="space-y-4 border-t border-[#E8DFD3]/40 px-4 pb-4 pt-4">
             <div className="relative max-h-32 overflow-hidden">
-              <p className="whitespace-pre-line text-[13px] leading-relaxed text-[#6B7280]">
+              <p className="whitespace-pre-line text-[13px] leading-relaxed text-[#6B5D54]">
                 {state.clip.script.slice(0, 500)}
               </p>
-              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white/40 to-transparent" />
             </div>
             <ClipAudioPlayer script={state.clip.script} />
             {state.clip.articles.length > 0 && (
               <div>
-                <p className="mb-1.5 text-[12px] font-medium text-[#9CA3AF]">Fuentes:</p>
+                <p className="mb-1.5 text-[12px] font-medium text-[#9B8E84]">Fuentes:</p>
                 <div className="flex flex-wrap gap-2">
                   {state.clip.articles.map((a) => (
-                    <a key={a.url} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-full bg-[#F9FAFB] px-3 py-1 text-[12px] text-[#6B7280] transition-colors hover:bg-[#7C3AED]/10 hover:text-[#7C3AED]">
-                      {a.source_name} <ExternalLink className="h-3 w-3" />
+                    <a key={a.url} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-full bg-[#F5EDE4] px-3 py-1 text-[12px] text-[#6B5D54] transition-all duration-500 ease-out hover:bg-[#E07856]/10 hover:text-[#E07856]">
+                      {a.source_name} <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
                     </a>
                   ))}
                 </div>
@@ -421,9 +421,9 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-5 py-6 lg:px-8">
-      {/* Search (Huxe Discover style) */}
+      {/* Search */}
       <div className="relative">
-        <SearchIcon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+        <SearchIcon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B8E84]" strokeWidth={1.5} />
         <input
           type="text"
           placeholder="Buscar nuevos shows"
@@ -436,13 +436,16 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-            <h2 className="text-base font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-[#E07856]" />
+            <h2
+              className="text-base text-[#1A1614]"
+              style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+            >
               En directo
             </h2>
           </div>
           {!stationsLoading && stations.length > 0 && (
-            <span className="text-[12px] text-[#9CA3AF]">
+            <span className="text-[12px] text-[#9B8E84]">
               {stations.length} estaciones
             </span>
           )}
@@ -452,7 +455,7 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
         {stationsLoading && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-48 animate-pulse rounded-2xl bg-white border border-[#E5E7EB]" />
+              <div key={i} className="h-48 animate-pulse rounded-3xl bg-white/40" />
             ))}
           </div>
         )}
@@ -474,10 +477,10 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
 
         {/* Empty state */}
         {!stationsLoading && stations.length === 0 && (
-          <div className="flex flex-col items-center rounded-2xl bg-white border border-[#E5E7EB] p-8 text-center">
+          <div className="flex flex-col items-center rounded-3xl glass-card p-8 text-center">
             <div className="mb-2 flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-red-500" />
-              <span className="text-sm font-medium text-[#9CA3AF]">Sin estaciones disponibles</span>
+              <div className="h-2 w-2 rounded-full bg-[#E07856]" />
+              <span className="text-sm font-medium text-[#9B8E84]">Sin estaciones disponibles</span>
             </div>
           </div>
         )}
@@ -486,7 +489,12 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
       {/* ═══ De tu gente ═══ */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">De tu gente</h2>
+          <h2
+            className="text-xl text-[#1A1614]"
+            style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+          >
+            De tu gente
+          </h2>
         </div>
         <SocialFeed variant="feed" />
       </section>
@@ -496,8 +504,13 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
         <section className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">Temas destacados</h2>
-              <p className="mt-0.5 text-[13px] text-[#9CA3AF]">Los temas más polémicos del momento.</p>
+              <h2
+                className="text-xl text-[#1A1614]"
+                style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+              >
+                Temas destacados
+              </h2>
+              <p className="mt-0.5 text-[13px] text-[#9B8E84]">Los temas más polémicos del momento.</p>
             </div>
           </div>
 
@@ -513,8 +526,13 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
           {clipTopics.length > 0 && (
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">Más trending</h2>
-                <p className="mt-0.5 text-[13px] text-[#9CA3AF]">Genera un clip sobre cualquier tema.</p>
+                <h2
+                  className="text-xl text-[#1A1614]"
+                  style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+                >
+                  Más trending
+                </h2>
+                <p className="mt-0.5 text-[13px] text-[#9B8E84]">Genera un clip sobre cualquier tema.</p>
               </div>
             </div>
           )}
@@ -529,8 +547,13 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">Populares</h2>
-            <p className="mt-0.5 text-[13px] text-[#9CA3AF]">Los episodios más valorados por la comunidad.</p>
+            <h2
+              className="text-xl text-[#1A1614]"
+              style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+            >
+              Populares
+            </h2>
+            <p className="mt-0.5 text-[13px] text-[#9B8E84]">Los episodios más valorados por la comunidad.</p>
           </div>
         </div>
         <SocialFeed variant="popular" />
@@ -538,12 +561,12 @@ export function DescubrirTab({ trending }: DescubrirTabProps) {
 
       {/* Empty state */}
       {trending.length === 0 && (
-        <div className="rounded-3xl bg-gradient-to-br from-white to-[#F9FAFB] p-12 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F9FAFB]">
-            <Radio className="h-7 w-7 text-[#6B7280]" />
+        <div className="rounded-3xl glass-card p-12 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F5EDE4]">
+            <Radio className="h-7 w-7 text-[#6B5D54]" strokeWidth={1.5} />
           </div>
-          <p className="text-[15px] font-medium text-[#6B7280]">No hay temas trending disponibles ahora mismo.</p>
-          <p className="mt-1 text-[13px] text-[#9CA3AF]">Vuelve más tarde para descubrir nuevos temas.</p>
+          <p className="text-[15px] font-medium text-[#6B5D54]">No hay temas trending disponibles ahora mismo.</p>
+          <p className="mt-1 text-[13px] text-[#9B8E84]">Vuelve más tarde para descubrir nuevos temas.</p>
         </div>
       )}
     </div>
