@@ -1,14 +1,16 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import {
   Play,
   Pause,
   Loader2,
-  Volume2,
   RotateCcw,
   AlertCircle,
+  SkipBack,
+  SkipForward,
 } from "lucide-react";
+import { parseDialogueSegments, type DialogueSegment } from "@/lib/tts-utils";
 
 interface AudioPlayerProps {
   audioUrl: string | null;
@@ -16,6 +18,8 @@ interface AudioPlayerProps {
   error: string | null;
   onRetry?: () => void;
   episodeId?: string;
+  script?: string;
+  episodeTitle?: string;
 }
 
 const SPEED_OPTIONS = [1, 1.25, 1.5, 2];
@@ -27,12 +31,50 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+/** Animated waveform bars */
+function Waveform({ active }: { active: boolean }) {
+  return (
+    <div className="flex items-end gap-[2px] h-6">
+      {Array.from({ length: 20 }).map((_, i) => (
+        <span
+          key={i}
+          className="w-[2px] rounded-full bg-[#7C3AED] transition-all duration-150"
+          style={{
+            height: active
+              ? `${Math.max(4, Math.random() * 24)}px`
+              : "4px",
+            opacity: active ? 0.6 + Math.random() * 0.4 : 0.3,
+            animationDelay: `${i * 50}ms`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Speaker avatar circle */
+function SpeakerAvatar({ label, active }: { label: string; active: boolean }) {
+  return (
+    <div
+      className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+        active
+          ? "bg-[#7C3AED] text-white ring-2 ring-[#7C3AED] ring-offset-2 ring-offset-white scale-110"
+          : "bg-[#F3F4F6] text-[#9CA3AF]"
+      }`}
+    >
+      {label}
+    </div>
+  );
+}
+
 export function AudioPlayer({
   audioUrl,
   isLoading,
   error,
   onRetry,
   episodeId,
+  script,
+  episodeTitle,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -48,6 +90,23 @@ export function AudioPlayer({
   const [isDragging, setIsDragging] = useState(false);
   const metricsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const listenTimeRef = useRef(0);
+
+  // Parse dialogue segments from script
+  const segments: DialogueSegment[] = useMemo(() => {
+    if (!script) return [];
+    return parseDialogueSegments(script);
+  }, [script]);
+
+  const hasDualVoice = segments.length >= 2 && new Set(segments.map((s) => s.speaker)).size >= 2;
+
+  // Estimate current segment based on time (divide duration equally)
+  const currentSegmentIndex = useMemo(() => {
+    if (!hasDualVoice || duration <= 0 || segments.length === 0) return -1;
+    const segmentDuration = duration / segments.length;
+    return Math.min(Math.floor(currentTime / segmentDuration), segments.length - 1);
+  }, [hasDualVoice, duration, currentTime, segments]);
+
+  const activeSpeaker = currentSegmentIndex >= 0 ? segments[currentSegmentIndex]?.speaker : null;
 
   useEffect(() => {
     if (!audioUrl) return;
@@ -136,6 +195,13 @@ export function AudioPlayer({
     localStorage.setItem("podcast-ai-playback-speed", String(newSpeed));
   };
 
+  const seekRelative = (seconds: number) => {
+    if (!audioRef.current) return;
+    const newTime = Math.max(0, Math.min(duration, audioRef.current.currentTime + seconds));
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!audioRef.current || !progressRef.current) return;
     const rect = progressRef.current.getBoundingClientRect();
@@ -179,10 +245,10 @@ export function AudioPlayer({
 
   if (isLoading) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black">
-        <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-forest" />
-          <span className="text-sm text-muted">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E5E7EB] bg-white shadow-lg md:left-[72px] lg:left-[240px]">
+        <div className="flex items-center justify-center gap-3 px-4 py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-[#7C3AED]" />
+          <span className="text-sm text-[#9CA3AF]">
             Generando audio del podcast...
           </span>
         </div>
@@ -192,14 +258,14 @@ export function AudioPlayer({
 
   if (error) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black">
-        <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 py-4">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E5E7EB] bg-white shadow-lg md:left-[72px] lg:left-[240px]">
+        <div className="flex items-center justify-center gap-3 px-4 py-4">
           <AlertCircle className="h-5 w-5 text-red-600" />
-          <span className="text-sm text-muted">{error}</span>
+          <span className="text-sm text-[#9CA3AF]">{error}</span>
           {onRetry && (
             <button
               onClick={onRetry}
-              className="flex cursor-pointer items-center gap-1 rounded-full bg-cream-dark/50 px-3 py-1.5 text-xs text-dark/70 transition-all duration-300 hover:bg-forest/10 hover:text-forest"
+              className="flex cursor-pointer items-center gap-1 rounded-full bg-[#F3F4F6] px-3 py-1.5 text-xs text-[#6B7280] transition-all duration-300 hover:bg-[#7C3AED]/10 hover:text-[#7C3AED]"
             >
               <RotateCcw className="h-3 w-3" />
               Reintentar
@@ -213,29 +279,61 @@ export function AudioPlayer({
   if (!audioUrl) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black">
-      {/* Barra de progreso */}
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E5E7EB] bg-white shadow-lg md:left-[72px] lg:left-[240px]">
+      {/* Segment text display (only with dual voice) */}
+      {hasDualVoice && currentSegmentIndex >= 0 && isPlaying && (
+        <div className="border-b border-[#F3F4F6] px-4 py-2">
+          <div className="flex items-center gap-3">
+            <span className="shrink-0 text-[11px] font-bold text-[#7C3AED]">
+              {activeSpeaker}
+            </span>
+            <p className="truncate text-[12px] text-[#6B7280]">
+              {segments[currentSegmentIndex]?.text.slice(0, 120)}
+              {(segments[currentSegmentIndex]?.text.length ?? 0) > 120 ? "..." : ""}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Progress bar */}
       <div
         ref={progressRef}
         className="group relative h-1 w-full cursor-pointer transition-all duration-300 hover:h-2"
         onMouseDown={handleMouseDown}
       >
-        <div className="absolute inset-0 bg-cream-dark" />
+        <div className="absolute inset-0 bg-[#E5E7EB]" />
         <div
-          className="absolute inset-y-0 left-0 bg-forest"
+          className="absolute inset-y-0 left-0 bg-[#7C3AED]"
           style={{ width: `${progress}%` }}
         />
         <div
-          className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-forest opacity-0 shadow-md transition-opacity duration-300 group-hover:opacity-100"
+          className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-[#7C3AED] opacity-0 shadow-md transition-opacity duration-300 group-hover:opacity-100"
           style={{ left: `calc(${progress}% - 6px)` }}
         />
       </div>
 
-      {/* Controles */}
-      <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-3">
+      {/* Controls */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* Speaker avatars (only with dual voice) */}
+        {hasDualVoice && (
+          <div className="hidden sm:flex items-center gap-1.5">
+            <SpeakerAvatar label="A" active={isPlaying && activeSpeaker === "ALEX"} />
+            <SpeakerAvatar label="S" active={isPlaying && activeSpeaker === "SARA"} />
+          </div>
+        )}
+
+        {/* Seek back */}
+        <button
+          onClick={() => seekRelative(-15)}
+          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#9CA3AF] transition-colors hover:text-[#111827]"
+        >
+          <SkipBack className="h-4 w-4" />
+        </button>
+
+        {/* Play/Pause */}
         <button
           onClick={togglePlay}
-          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-forest text-white transition-transform duration-300 hover:scale-105"
+          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#7C3AED] text-white transition-transform duration-300 hover:scale-105"
         >
           {isPlaying ? (
             <Pause className="h-5 w-5" />
@@ -244,20 +342,33 @@ export function AudioPlayer({
           )}
         </button>
 
+        {/* Seek forward */}
+        <button
+          onClick={() => seekRelative(15)}
+          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#9CA3AF] transition-colors hover:text-[#111827]"
+        >
+          <SkipForward className="h-4 w-4" />
+        </button>
+
+        {/* Waveform (only when playing with dual voice) */}
+        {hasDualVoice && (
+          <div className="hidden sm:block">
+            <Waveform active={isPlaying} />
+          </div>
+        )}
+
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium text-dark">
-            Tu podcast del día
+          <span className="truncate text-sm font-medium text-[#111827]">
+            {episodeTitle || "Tu podcast del día"}
           </span>
-          <span className="text-xs text-muted">
+          <span className="text-xs text-[#9CA3AF]">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
 
-        <Volume2 className="hidden h-4 w-4 text-muted-light sm:block" />
-
         <button
           onClick={cycleSpeed}
-          className="cursor-pointer rounded-full bg-cream-dark/50 px-3 py-1.5 text-xs font-medium text-dark/70 transition-all duration-300 hover:bg-forest/10 hover:text-forest"
+          className="cursor-pointer rounded-full bg-[#F3F4F6] px-3 py-1.5 text-xs font-medium text-[#6B7280] transition-all duration-300 hover:bg-[#7C3AED]/10 hover:text-[#7C3AED]"
         >
           {speed}x
         </button>

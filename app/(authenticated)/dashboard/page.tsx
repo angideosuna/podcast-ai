@@ -4,7 +4,8 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Mic, History, Compass, User } from "lucide-react";
+import { Loader2, Home, Search, User, Plus } from "lucide-react";
+import { useDashboard } from "@/components/dashboard-context";
 import type { EpisodeSummary } from "@/lib/types";
 
 // Lazy load tab components — only the active tab gets loaded
@@ -24,6 +25,10 @@ const PerfilTab = dynamic(
   () => import("@/components/dashboard/perfil-tab").then((m) => ({ default: m.PerfilTab })),
   { ssr: false }
 );
+const UniversoTab = dynamic(
+  () => import("@/components/dashboard/universo-tab").then((m) => ({ default: m.UniversoTab })),
+  { ssr: false }
+);
 
 // ─── Types ───────────────────────────────────────────────────
 interface Schedule {
@@ -40,21 +45,12 @@ interface TrendingTopic {
   category: string | null;
 }
 
-type Tab = "hoy" | "historial" | "descubrir" | "perfil";
-
-const TABS: { id: Tab; label: string; icon: React.ElementType; emoji: string }[] = [
-  { id: "hoy", label: "Hoy", icon: Mic, emoji: "🎧" },
-  { id: "historial", label: "Historial", icon: History, emoji: "📚" },
-  { id: "descubrir", label: "Descubrir", icon: Compass, emoji: "🔍" },
-  { id: "perfil", label: "Mi Perfil", icon: User, emoji: "👤" },
-];
-
 // ═══════════════════════════════════════════════════════════════
 // MAIN DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 export default function DashboardPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("hoy");
+  const { activeTab, setActiveTab } = useDashboard();
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -105,7 +101,7 @@ export default function DashboardPage() {
       const [profileRes, prefsRes, episodesRes, scheduleRes, trendingRes] = await Promise.all([
         supabase.from("profiles").select("nombre, survey_completed").eq("id", user.id).single(),
         supabase.from("preferences").select("id").eq("user_id", user.id).single(),
-        supabase.from("episodes").select("id, title, topics, duration, tone, audio_url, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(3),
+        supabase.from("episodes").select("id, title, topics, duration, tone, audio_url, is_shared, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(3),
         supabase.from("schedules").select("time, frequency, custom_days, is_active").eq("user_id", user.id).single(),
         fetch("/api/trending").then((r) => r.ok ? r.json() : null).catch(() => null),
       ]);
@@ -148,8 +144,9 @@ export default function DashboardPage() {
     return recentEpisodes.find((ep) => ep.topics.includes("weekly-digest"));
   }, [recentEpisodes]);
 
-  const switchToHistorial = useCallback(() => setActiveTab("historial"), []);
-  const switchToPerfil = useCallback(() => setActiveTab("perfil"), []);
+  const switchToHistorial = useCallback(() => setActiveTab("historial"), [setActiveTab]);
+  const switchToPerfil = useCallback(() => setActiveTab("perfil"), [setActiveTab]);
+  const switchToUniverso = useCallback(() => setActiveTab("universo"), [setActiveTab]);
   const handleSurveyChange = useCallback((c: boolean) => setSurveyCompleted(c), []);
 
   const handleEpisodeGenerated = useCallback((episode: EpisodeSummary) => {
@@ -158,37 +155,66 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100vh-60px)] items-center justify-center bg-cream">
-        <Loader2 className="h-8 w-8 animate-spin text-forest" />
+      <div className="flex min-h-[calc(100vh-56px)] items-center justify-center bg-[#F9FAFB]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#9CA3AF]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-60px)] bg-cream text-dark">
-      {/* ── Tab bar ── */}
-      <div className="sticky top-[53px] z-30 border-b border-white/10 bg-black" role="tablist" aria-label="Secciones del dashboard">
-        <div className="mx-auto flex max-w-3xl">
-          {TABS.map(tab => (
+    <div className="min-h-full bg-[#F9FAFB] text-[#111827] pb-20 md:pb-0">
+      {/* ── Sub-tabs (For You / Discover style) — only on mobile, sidebar handles desktop ── */}
+      {(activeTab === "hoy" || activeTab === "historial") && (
+        <div className="sticky top-0 z-30 bg-[#F9FAFB]/95 shadow-sm md:hidden" role="tablist" aria-label="Sub-secciones">
+          <div className="flex items-center gap-6 px-5 py-3">
             <button
-              key={tab.id}
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              aria-controls={`panel-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-1 cursor-pointer items-center justify-center gap-2 py-3 text-sm font-medium transition-all duration-300 ${
-                activeTab === tab.id
-                  ? "border-b-2 border-[#1DB954] text-white"
-                  : "text-muted hover:text-dark"
+              onClick={() => setActiveTab("hoy")}
+              className={`relative text-[16px] font-bold transition-colors ${
+                activeTab === "hoy" ? "text-[#111827]" : "text-[#9CA3AF] hover:text-[#6B7280]"
               }`}
             >
-              <span className="sm:hidden" aria-hidden="true">{tab.emoji}</span>
-              <tab.icon className="hidden h-4 w-4 sm:block" aria-hidden="true" />
-              <span>{tab.label}</span>
+              Para ti
+              {activeTab === "hoy" && (
+                <span className="absolute -bottom-3 left-0 right-0 h-[2px] bg-[#7C3AED]" />
+              )}
             </button>
-          ))}
+            <button
+              onClick={() => setActiveTab("historial")}
+              className={`relative text-[16px] font-bold transition-colors ${
+                activeTab === "historial" ? "text-[#111827]" : "text-[#9CA3AF] hover:text-[#6B7280]"
+              }`}
+            >
+              Historial
+              {activeTab === "historial" && (
+                <span className="absolute -bottom-3 left-0 right-0 h-[2px] bg-[#7C3AED]" />
+              )}
+            </button>
+            <div className="flex-1" />
+            <button
+              onClick={() => {
+                /* refresh - could trigger data reload */
+              }}
+              className="text-[#9CA3AF] hover:text-[#111827] transition-colors"
+              aria-label="Actualizar"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {(activeTab === "perfil") && (
+        <div className="sticky top-0 z-30 bg-[#F9FAFB]/95 shadow-sm md:hidden" role="tablist">
+          <div className="flex items-center gap-6 px-5 py-3">
+            <button className="relative text-[16px] font-bold text-[#111827]">
+              Mi Perfil
+              <span className="absolute -bottom-3 left-0 right-0 h-[2px] bg-[#7C3AED]" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Tab panels ── */}
       <div id={`panel-${activeTab}`} role="tabpanel">
@@ -207,6 +233,7 @@ export default function DashboardPage() {
             onDismissInstall={dismissInstall}
             onSwitchToHistorial={switchToHistorial}
             onSwitchToPerfil={switchToPerfil}
+            onSwitchToUniverso={switchToUniverso}
             onEpisodeGenerated={handleEpisodeGenerated}
           />
         )}
@@ -219,9 +246,67 @@ export default function DashboardPage() {
           <DescubrirTab trending={trending} />
         )}
 
+        {activeTab === "universo" && <UniversoTab />}
+
         {activeTab === "perfil" && (
           <PerfilTab onNameChange={setProfileName} onSurveyChange={handleSurveyChange} />
         )}
+      </div>
+
+      {/* ── Bottom floating capsule nav — MOBILE ONLY ── */}
+      <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 md:hidden">
+        <nav className="bottom-nav-capsule flex items-center gap-1 rounded-full px-2 py-2" role="tablist" aria-label="Navegación principal">
+          {/* Home pill */}
+          <button
+            role="tab"
+            aria-selected={activeTab === "hoy" || activeTab === "historial"}
+            onClick={() => setActiveTab("hoy")}
+            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-300 ${
+              activeTab === "hoy" || activeTab === "historial"
+                ? "bg-[#7C3AED]/10 text-[#7C3AED]"
+                : "text-[#9CA3AF] hover:text-[#6B7280]"
+            }`}
+          >
+            <Home className="h-5 w-5" />
+          </button>
+
+          {/* Discover pill */}
+          <button
+            role="tab"
+            aria-selected={activeTab === "descubrir" || activeTab === "universo"}
+            onClick={() => setActiveTab("descubrir")}
+            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-300 ${
+              activeTab === "descubrir" || activeTab === "universo"
+                ? "bg-[#7C3AED]/10 text-[#7C3AED]"
+                : "text-[#9CA3AF] hover:text-[#6B7280]"
+            }`}
+          >
+            <Search className="h-5 w-5" />
+          </button>
+
+          {/* Profile pill */}
+          <button
+            role="tab"
+            aria-selected={activeTab === "perfil"}
+            onClick={() => setActiveTab("perfil")}
+            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-300 ${
+              activeTab === "perfil"
+                ? "bg-[#7C3AED]/10 text-[#7C3AED]"
+                : "text-[#9CA3AF] hover:text-[#6B7280]"
+            }`}
+          >
+            <User className="h-5 w-5" />
+          </button>
+
+          {/* + circular button */}
+          <button
+            onClick={() => setActiveTab("universo")}
+            className="ml-1 flex h-11 w-11 items-center justify-center rounded-full bg-[#7C3AED] text-white transition-all duration-300 hover:bg-[#6D28D9]"
+            aria-label="Crear"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </nav>
       </div>
     </div>
   );

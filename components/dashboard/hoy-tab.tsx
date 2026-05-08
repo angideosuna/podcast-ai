@@ -8,6 +8,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { BrowserAudioPlayer } from "@/components/browser-audio-player";
 import { AdjustEpisode } from "@/components/adjust-episode";
 import { EpisodeFeedback } from "@/components/episode-feedback";
+import { FullscreenPlayer } from "@/components/fullscreen-player";
 import {
   Loader2,
   Share2,
@@ -15,11 +16,23 @@ import {
   Play,
   Download,
   X,
-  Headphones,
   Clock,
   RefreshCw,
+  Globe,
+  Lock,
+  Sparkles,
+  Mic,
+  ArrowRight,
+  AlertCircle,
+  FileText,
+  ChevronRight,
+  Sun,
 } from "lucide-react";
+import { EpisodeThumbnail } from "@/components/episode-thumbnail";
+import dynamic from "next/dynamic";
 import type { EpisodeSummary, Article, Preferences, LoadingPhase } from "@/lib/types";
+
+const DeepCastSection = dynamic(() => import("@/components/deepcast-section").then(m => m.DeepCastSection), { ssr: false });
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -44,17 +57,29 @@ interface HoyTabProps {
   onDismissInstall: () => void;
   onSwitchToHistorial: () => void;
   onSwitchToPerfil: () => void;
+  onSwitchToUniverso: () => void;
   onEpisodeGenerated: (episode: EpisodeSummary) => void;
 }
 
 const SCHEDULE_PROMPT_KEY = "wavecast_schedule_prompt_count";
 
-const LOADING_MESSAGES: Record<string, { emoji: string; text: string }> = {
-  news: { emoji: "📡", text: "Buscando noticias del día..." },
-  script: { emoji: "✍️", text: "Generando tu guion personalizado..." },
-  done: { emoji: "✅", text: "¡Listo!" },
-  error: { emoji: "❌", text: "Ha ocurrido un error" },
-};
+// ─── Helpers ─────────────────────────────────────────────────
+
+function getWeatherLabel(): string {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 12) return "Despejado";
+  if (h >= 12 && h < 15) return "Soleado";
+  if (h >= 15 && h < 20) return "Atardecer";
+  return "Noche";
+}
+
+function getFormattedDate(): string {
+  return new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════
 // HOY TAB
@@ -73,6 +98,7 @@ export function HoyTab({
   onDismissInstall,
   onSwitchToHistorial,
   onSwitchToPerfil,
+  onSwitchToUniverso,
   onEpisodeGenerated,
   surveyCompleted,
 }: HoyTabProps) {
@@ -94,8 +120,33 @@ export function HoyTab({
   const [shareLoading, setShareLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Public toggle state
+  const [isPublic, setIsPublic] = useState(false);
+  const [publicLoading, setPublicLoading] = useState(false);
+
   // Schedule suggestion state
   const [schedulePromptState, setSchedulePromptState] = useState<"hidden" | "visible" | "activating" | "confirmed">("hidden");
+
+  // Fullscreen player state
+  const [showFullscreen, setShowFullscreen] = useState(false);
+
+  // Cover image state
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+
+  // Audio generation state (ElevenLabs)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioGenerating, setAudioGenerating] = useState(false);
+
+  // Transcript visibility
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  // Generating sub-phase for animated dots
+  const [genSubPhase, setGenSubPhase] = useState(0);
+
+  // Sync isPublic from todayEpisode
+  useEffect(() => {
+    if (todayEpisode) setIsPublic(!!todayEpisode.is_shared);
+  }, [todayEpisode]);
 
   // Load preferences on mount
   useEffect(() => {
@@ -128,7 +179,22 @@ export function HoyTab({
     };
   }, []);
 
-  // Show schedule suggestion after successful generation (no active schedule, shown < 3 times)
+  // Generating sub-phase animation
+  useEffect(() => {
+    if (phase === "news") {
+      setGenSubPhase(0);
+      const t1 = setTimeout(() => setGenSubPhase(1), 1200);
+      return () => clearTimeout(t1);
+    }
+    if (phase === "script") {
+      setGenSubPhase(1);
+      const t2 = setTimeout(() => setGenSubPhase(2), 4000);
+      return () => clearTimeout(t2);
+    }
+    setGenSubPhase(0);
+  }, [phase]);
+
+  // Show schedule suggestion after successful generation
   useEffect(() => {
     if (phase !== "done") {
       if (schedulePromptState !== "confirmed") setSchedulePromptState("hidden");
@@ -198,9 +264,46 @@ export function HoyTab({
       setGeneratedScript(data.script);
       setGeneratedArticles(data.articles);
       if (data.episodeId) setGeneratedEpisodeId(data.episodeId);
+      setCoverImageUrl(null);
+      setAudioUrl(null);
       setPhase("done");
 
-      // Notify parent so todayEpisode updates
+      // Auto-generate audio with ElevenLabs
+      if (data.script && data.episodeId) {
+        setAudioGenerating(true);
+        fetch("/api/generate-audio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            script: data.script,
+            episodeId: data.episodeId,
+          }),
+        })
+          .then(async (audioRes) => {
+            if (audioRes.ok) {
+              const blob = await audioRes.blob();
+              const url = URL.createObjectURL(blob);
+              setAudioUrl(url);
+            }
+          })
+          .catch(() => {})
+          .finally(() => setAudioGenerating(false));
+      }
+
+      // Delayed fetch: cover image
+      if (data.episodeId) {
+        setTimeout(async () => {
+          try {
+            const res = await fetch(`/api/episodes/${data.episodeId}/cover`);
+            if (res.ok) {
+              const coverData = await res.json();
+              if (coverData.cover_image_url) setCoverImageUrl(coverData.cover_image_url);
+            }
+          } catch { /* silent */ }
+        }, 5000);
+      }
+
+      // Notify parent
       if (data.episodeId) {
         onEpisodeGenerated({
           id: data.episodeId,
@@ -209,6 +312,7 @@ export function HoyTab({
           duration: prefs.duration,
           tone: prefs.tone,
           audio_url: null,
+          is_shared: false,
           created_at: new Date().toISOString(),
         });
       }
@@ -247,58 +351,122 @@ export function HoyTab({
     } catch { /* silent */ } finally { setShareLoading(false); }
   }, [generatedEpisodeId, todayEpisode?.id]);
 
-  // ─── RENDER: Loading state (generating) ─────────────────────
+  const handleTogglePublic = useCallback(async () => {
+    const eid = generatedEpisodeId || todayEpisode?.id;
+    if (!eid) return;
+    setPublicLoading(true);
+    const prev = isPublic;
+    setIsPublic(!prev);
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ episode_id: eid }),
+      });
+      if (!res.ok) { setIsPublic(prev); return; }
+      const data = await res.json();
+      setIsPublic(data.is_shared);
+    } catch {
+      setIsPublic(prev);
+    } finally {
+      setPublicLoading(false);
+    }
+  }, [generatedEpisodeId, todayEpisode?.id, isPublic]);
+
+  // ─── Extract episode title from script ─────────────────────
+  const episodeTitle = (() => {
+    if (!generatedScript) return "Tu podcast del día";
+    const match = generatedScript.match(/^#\s+(.+)/m);
+    if (match) {
+      const clean = match[1].replace(/^[🎙️🎧📰✨🔥💡]+\s*/, "").replace(/\s*[🎙️🎧📰✨🔥💡]+$/, "").trim();
+      return clean || match[1].trim();
+    }
+    return "Tu podcast del día";
+  })();
+
+  // ═══════════════════════════════════════════════════════════
+  // RENDER: GENERATING STATE
+  // ═══════════════════════════════════════════════════════════
 
   if (phase === "news" || phase === "script") {
-    const current = LOADING_MESSAGES[phase];
+    const PHASE_TEXTS = [
+      "Recopilando noticias de hoy...",
+      "Alex y Sara preparan el guion...",
+      "Casi listo...",
+    ];
+
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-dark">
-        <div className="w-full max-w-md space-y-8 text-center">
-          <div className="text-6xl animate-bounce">{current.emoji}</div>
-          <div>
-            <h1 className="text-2xl font-bold">{current.text}</h1>
-            <p className="mt-2 text-sm text-muted-light">Esto puede tardar unos segundos...</p>
-          </div>
-          <div className="mx-auto w-64 overflow-hidden rounded-full bg-cream-dark">
-            <div
-              className="h-2 rounded-full bg-forest transition-all duration-1000"
-              style={{ width: phase === "news" ? "30%" : "70%" }}
-            />
-          </div>
-          <div className="flex justify-center gap-6 text-sm">
-            <span className={phase === "news" ? "text-dark" : "text-muted-light"}>
-              {phase === "news" ? "●" : "✓"} Noticias
-            </span>
-            <span className={phase === "script" ? "text-dark" : "text-muted-light"}>
-              {phase === "script" ? "●" : "○"} Guion
-            </span>
-            <span className="text-muted-light">○ Listo</span>
+      <div className="mx-auto max-w-6xl px-5 py-6 lg:px-8">
+        <div className="overflow-hidden rounded-3xl glass-card p-8">
+          <div className="flex flex-col items-center gap-6 text-center">
+            {/* Waveform bars */}
+            <div className="flex items-end gap-1">
+              {[8, 16, 24, 16, 8].map((baseH, i) => (
+                <span
+                  key={i}
+                  className="w-1.5 rounded-full bg-[#7C3AED]/40"
+                  style={{
+                    height: `${baseH}px`,
+                    animation: `barPulse 1.2s ease-in-out ${i * 0.15}s infinite alternate`,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Phase text */}
+            <p className="text-sm text-[#6B7280]">
+              {PHASE_TEXTS[genSubPhase]}
+            </p>
+
+            {/* Phase indicators */}
+            <div className="flex items-center gap-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div
+                    className={`h-2 w-2 rounded-full transition-all duration-500 ${
+                      i < genSubPhase
+                        ? "bg-[#111827]"
+                        : i === genSubPhase
+                          ? "bg-[#111827] animate-pulse"
+                          : "bg-[#D1D5DB]"
+                    }`}
+                  />
+                  {i < 2 && <div className={`h-px w-8 transition-colors duration-500 ${i < genSubPhase ? "bg-[#6B7280]" : "bg-[#E5E7EB]"}`} />}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  // ─── RENDER: Error state ────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // RENDER: ERROR STATE
+  // ═══════════════════════════════════════════════════════════
 
   if (phase === "error") {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-dark">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <div className="text-6xl">❌</div>
-          <h1 className="text-2xl font-bold">Ha ocurrido un error</h1>
-          <p className="text-muted">{error}</p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+      <div className="mx-auto max-w-6xl px-5 py-6 lg:px-8">
+        <div className="flex flex-col items-center gap-5 glass-card p-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
+            <AlertCircle className="h-7 w-7 text-red-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">Ha ocurrido un error</h2>
+            <p className="mt-2 text-sm text-red-400">{error}</p>
+          </div>
+          <div className="flex gap-3">
             <button
               onClick={() => preferences && !isGenerating && generatePodcast(preferences)}
               disabled={isGenerating}
-              className="cursor-pointer rounded-full bg-forest px-6 py-3 font-medium text-white transition-all duration-300 hover:bg-forest-light disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-huxe px-6"
             >
-              Reintentar
+              Intentar de nuevo
             </button>
             <button
               onClick={() => setPhase("idle")}
-              className="cursor-pointer rounded-full border border-white/[0.08] px-6 py-3 font-medium text-dark/80 transition-all duration-300 hover:border-forest/30 hover:text-forest"
+              className="btn-huxe-outline px-6"
             >
               Volver
             </button>
@@ -308,57 +476,78 @@ export function HoyTab({
     );
   }
 
-  // ─── RENDER: Generated podcast ──────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // RENDER: DONE STATE — Episode card
+  // ═══════════════════════════════════════════════════════════
 
   if (phase === "done" && generatedScript) {
+    const topicsList = preferences?.topics ?? [];
+
     return (
-      <div className="mx-auto max-w-3xl px-4 pb-24 pt-8">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="text-4xl mb-3">🎙️</div>
-          <h1 className="text-3xl font-bold">Tu podcast del día</h1>
-          {preferences && (
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">
-              <span className="rounded-full bg-cream-dark px-3 py-1">⏱️ {preferences.duration} min</span>
-              <span className="rounded-full bg-cream-dark px-3 py-1">🎯 {preferences.tone}</span>
-              <span className="rounded-full bg-cream-dark px-3 py-1">
-                {preferences.voice === "male" ? "👨 Voz masculina" : "👩 Voz femenina"}
-              </span>
+      <div className="mx-auto max-w-6xl px-5 pb-32 pt-6 lg:px-8">
+        {/* Episode cover — clickable to open fullscreen */}
+        <div
+          className="group relative cursor-pointer overflow-hidden rounded-3xl"
+          onClick={() => setShowFullscreen(true)}
+        >
+          <div className="relative flex h-[220px] items-center justify-center">
+            <EpisodeThumbnail topics={topicsList} size="lg" coverImageUrl={coverImageUrl ?? undefined} />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-all duration-200 group-hover:bg-black/30">
+              <div className="flex items-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-black/40 text-base font-extrabold text-white font-[family-name:var(--font-montserrat)]">
+                  A
+                </div>
+                <div className="-ml-4 flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-black/40 text-base font-extrabold text-white font-[family-name:var(--font-montserrat)]">
+                  S
+                </div>
+              </div>
+              <div className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur-md opacity-0 transition-all duration-200 group-hover:opacity-100">
+                <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Script */}
-        <div className="glass-card p-6 sm:p-8">
-          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(generatedScript) }} />
-        </div>
+        {/* Title */}
+        <h1 className="mt-5 text-xl font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">
+          {episodeTitle}
+        </h1>
 
-        {/* Sources */}
-        {generatedArticles.length > 0 && (
-          <div className="glass-card p-6 mt-8">
-            <h2 className="mb-4 text-lg font-semibold text-dark">📰 Fuentes utilizadas</h2>
-            <ul className="space-y-3">
-              {generatedArticles.map((article, i) => (
-                <li key={article.url || i} className="border-b border-white/[0.08] pb-3 last:border-0 last:pb-0">
-                  <a href={article.url} target="_blank" rel="noopener noreferrer" className="group block">
-                    <p className="font-medium text-dark underline group-hover:text-forest transition-all duration-300">{article.title}</p>
-                    <p className="mt-1 text-sm text-muted-light">{article.source} · {new Date(article.publishedAt).toLocaleDateString("es-ES")}</p>
-                  </a>
-                </li>
-              ))}
-            </ul>
+        {/* Topic pills */}
+        {topicsList.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {topicsList.slice(0, 5).map((t) => {
+              const topic = getTopicById(t);
+              return (
+                <span key={t} className="rounded-full bg-[#F3F4F6] px-3 py-1 text-[11px] font-medium text-[#6B7280]">
+                  {topic?.nombre || t}
+                </span>
+              );
+            })}
+            {preferences && (
+              <span className="rounded-full bg-[#F3F4F6] px-3 py-1 text-[11px] font-medium text-[#6B7280]">
+                <Clock className="mr-1 inline h-3 w-3" />{preferences.duration} min
+              </span>
+            )}
           </div>
         )}
 
-        {/* Feedback */}
-        {generatedEpisodeId && (
-          <div className="mt-8">
-            <EpisodeFeedback episodeId={generatedEpisodeId} />
+        {/* Transcript toggle */}
+        <button
+          onClick={() => setShowTranscript(!showTranscript)}
+          className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 glass-card px-4 py-3 text-[13px] font-semibold text-[#6B7280] transition-all duration-200 hover:bg-[#F3F4F6] hover:text-[#111827]"
+        >
+          <FileText className="h-4 w-4" />
+          {showTranscript ? "Ocultar transcripción" : "Ver transcripción"}
+        </button>
+        {showTranscript && (
+          <div className="mt-3 glass-card p-6 sm:p-8">
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(generatedScript) }} />
           </div>
         )}
 
-        {/* Actions */}
-        <div className="mt-8 flex flex-wrap gap-3 justify-center">
+        {/* Actions row */}
+        <div className="mt-5 flex flex-wrap gap-2">
           <button
             onClick={() => {
               if (preferences && !isGenerating) {
@@ -367,9 +556,9 @@ export function HoyTab({
               }
             }}
             disabled={isGenerating}
-            className="flex cursor-pointer items-center gap-2 rounded-full bg-forest px-6 py-3 font-medium text-white transition-all duration-300 hover:bg-forest-light disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-huxe-ghost flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
             Regenerar
           </button>
           <AdjustEpisode
@@ -381,40 +570,78 @@ export function HoyTab({
             }}
           />
           {(generatedEpisodeId || todayEpisode?.id) && (
-            <button
-              onClick={handleShare}
-              disabled={shareLoading}
-              className="flex cursor-pointer items-center gap-2 rounded-full border border-white/[0.08] px-6 py-3 font-medium text-dark/80 transition-all duration-300 hover:border-forest/30 hover:text-forest disabled:opacity-50"
-            >
-              {copied ? <><Check className="h-4 w-4" /> Enlace copiado</> : <><Share2 className="h-4 w-4" /> Compartir</>}
-            </button>
+            <>
+              <button
+                onClick={handleShare}
+                disabled={shareLoading}
+                className="btn-huxe-ghost flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {copied ? <><Check className="h-3.5 w-3.5 text-[#7C3AED]" /> Copiado</> : <><Share2 className="h-3.5 w-3.5" /> Compartir</>}
+              </button>
+              <button
+                onClick={handleTogglePublic}
+                disabled={publicLoading}
+                className={`btn-huxe-ghost flex items-center gap-1.5 disabled:opacity-50 ${
+                  isPublic ? "!bg-[#7C3AED]/15 !text-[#7C3AED]" : ""
+                }`}
+              >
+                {isPublic ? <Globe className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                {isPublic ? "Público" : "Hacer público"}
+              </button>
+            </>
           )}
         </div>
 
-        {/* Browser audio player */}
-        {preferences && (
-          <BrowserAudioPlayer script={generatedScript} voice={preferences.voice} />
+        {/* Feedback */}
+        {generatedEpisodeId && (
+          <div className="mt-6">
+            <EpisodeFeedback episodeId={generatedEpisodeId} />
+          </div>
+        )}
+
+        {/* Sources */}
+        {generatedArticles.length > 0 && (
+          <div className="mt-6 glass-card p-5">
+            <p className="mb-3 text-[13px] font-semibold text-[#6B7280]">
+              Basado en {generatedArticles.length} noticias
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {generatedArticles.map((article, i) => (
+                <a
+                  key={article.url || i}
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-[#F3F4F6] px-3 py-1 text-[11px] text-[#6B7280] transition-all duration-200 hover:bg-[#E5E7EB] hover:text-[#111827]"
+                >
+                  {article.source}
+                </a>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Schedule suggestion banner */}
         {schedulePromptState !== "hidden" && (
-          <div className="mt-8 animate-in fade-in slide-in-from-bottom-2 duration-500 overflow-hidden rounded-2xl border border-forest/20 bg-forest/[0.05] p-5">
+          <div className="mt-6 overflow-hidden glass-card p-5">
             {schedulePromptState === "confirmed" ? (
               <div className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-forest" />
-                <p className="text-sm font-medium">Listo. Mañana a las 8:00 tendrás tu podcast esperándote</p>
+                <Check className="h-5 w-5 shrink-0 text-[#7C3AED]" />
+                <p className="text-[14px] font-medium text-[#111827]">Listo. Mañana a las 8:00 tendrás tu podcast esperándote</p>
               </div>
             ) : (
               <>
                 <div className="flex items-start gap-3">
-                  <span className="shrink-0 text-2xl">🎧</span>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F3F4F6]">
+                    <Clock className="h-5 w-5 text-[#6B7280]" />
+                  </div>
                   <div className="flex-1">
-                    <p className="font-medium">¿Te ha gustado? Recíbelo cada mañana automáticamente</p>
-                    <p className="mt-1 text-sm text-muted">Programa tu podcast diario y empieza cada día informado</p>
+                    <p className="text-[14px] font-medium text-[#111827]">¿Te ha gustado? Recíbelo cada mañana</p>
+                    <p className="mt-0.5 text-[13px] text-[#9CA3AF]">Programa tu podcast diario y empieza cada día informado</p>
                   </div>
                   <button
                     onClick={handleDismissSchedulePrompt}
-                    className="shrink-0 cursor-pointer text-muted transition-colors hover:text-dark"
+                    className="btn-icon-circle h-8 w-8 shrink-0"
                     aria-label="Cerrar"
                   >
                     <X className="h-4 w-4" />
@@ -424,14 +651,14 @@ export function HoyTab({
                   <button
                     onClick={handleActivateDaily}
                     disabled={schedulePromptState === "activating"}
-                    className="flex cursor-pointer items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:bg-forest-light disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-huxe px-5 py-2.5 text-[13px] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {schedulePromptState === "activating" && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {schedulePromptState === "activating" && <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />}
                     Activar podcast diario a las 8:00
                   </button>
                   <button
                     onClick={onSwitchToPerfil}
-                    className="cursor-pointer text-sm font-medium text-forest underline underline-offset-2 transition-colors hover:text-forest-light"
+                    className="cursor-pointer text-[13px] font-medium text-[#6B7280] transition-colors hover:text-[#111827]"
                   >
                     Personalizar horario
                   </button>
@@ -440,150 +667,257 @@ export function HoyTab({
             )}
           </div>
         )}
+
+        {/* Audio player */}
+        {audioGenerating && (
+          <div className="fixed bottom-24 left-0 right-0 z-50 flex items-center justify-center gap-3 border-t border-[#E5E7EB] bg-white/95 shadow-md border border-[#E5E7EB] px-4 py-3">
+            <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
+            <span className="text-[13px] text-[#6B7280]">Generando audio con voces reales...</span>
+          </div>
+        )}
+        {audioUrl ? (
+          <div className="fixed bottom-24 left-0 right-0 z-50 border-t border-[#E5E7EB] bg-white/95 shadow-md border border-[#E5E7EB] px-4 py-3">
+            <div className="mx-auto flex max-w-3xl items-center gap-3">
+              <span className="shrink-0 text-[13px] font-semibold text-[#111827]">{episodeTitle}</span>
+              <audio src={audioUrl} controls className="h-10 flex-1" style={{ filter: "invert(1) hue-rotate(145deg)" }} />
+            </div>
+          </div>
+        ) : !audioGenerating && preferences ? (
+          <BrowserAudioPlayer script={generatedScript} voice={preferences.voice} episodeId={generatedEpisodeId ?? undefined} episodeTitle={episodeTitle} topics={topicsList} />
+        ) : null}
+
+        {/* Fullscreen player overlay */}
+        {showFullscreen && (audioUrl || todayEpisode?.audio_url) && (
+          <FullscreenPlayer
+            audioUrl={audioUrl || todayEpisode!.audio_url!}
+            script={generatedScript}
+            episodeTitle={episodeTitle}
+            topics={topicsList}
+            coverImageUrl={coverImageUrl ?? undefined}
+            episodeId={generatedEpisodeId ?? todayEpisode?.id}
+            onClose={() => setShowFullscreen(false)}
+          />
+        )}
       </div>
     );
   }
 
-  // ─── RENDER: Default dashboard view (idle) ──────────────────
+  // ═══════════════════════════════════════════════════════════
+  // RENDER: IDLE STATE — Huxe Home
+  // ═══════════════════════════════════════════════════════════
+
+  const dateStr = getFormattedDate();
+  const weather = getWeatherLabel();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
+    <div className="mx-auto max-w-6xl space-y-5 px-5 py-4 lg:px-8">
       {/* PWA Install */}
       {showInstallBanner && (
-        <div className="glass-card flex items-center gap-3 p-4">
-          <Download className="h-5 w-5 shrink-0 text-forest" />
+        <div className="flex items-center gap-3 glass-card p-4">
+          <Download className="h-5 w-5 shrink-0 text-[#6B7280]" />
           <div className="flex-1">
-            <p className="text-sm font-medium">Instala WaveCast en tu dispositivo</p>
-            <p className="text-xs text-muted">Acceso rápido y experiencia nativa</p>
+            <p className="text-[14px] font-medium text-[#111827]">Instala WaveCast</p>
+            <p className="text-[12px] text-[#9CA3AF]">Acceso rápido y experiencia nativa</p>
           </div>
-          <button onClick={onInstall} className="cursor-pointer rounded-full bg-forest px-4 py-1.5 text-xs font-medium text-white hover:bg-forest-light">Instalar</button>
-          <button onClick={onDismissInstall} className="cursor-pointer text-muted hover:text-dark"><X className="h-4 w-4" /></button>
+          <button onClick={onInstall} className="btn-huxe px-4 py-1.5 text-[13px]">Instalar</button>
+          <button onClick={onDismissInstall} className="btn-icon-circle h-8 w-8"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      {/* Banner perfil incompleto */}
+      {/* Profile incomplete banner */}
       {!surveyCompleted && (
-        <div className="glass-card flex items-center gap-3 p-4">
-          <span className="text-xl">💡</span>
-          <p className="flex-1 text-sm font-medium">Completa tu perfil para podcasts más personalizados</p>
-          <button onClick={onSwitchToPerfil} className="cursor-pointer rounded-full bg-forest px-4 py-1.5 text-xs font-medium text-white hover:bg-forest-light">Completar</button>
+        <div className="flex items-center gap-3 glass-card p-4">
+          <Sparkles className="h-5 w-5 shrink-0 text-[#6B7280]" />
+          <p className="flex-1 text-[14px] font-medium text-[#111827]">Completa tu perfil para podcasts más personalizados</p>
+          <button onClick={onSwitchToPerfil} className="btn-huxe px-4 py-1.5 text-[13px]">Completar</button>
         </div>
       )}
 
-      {/* Saludo */}
-      <div>
-        <h1 className="text-3xl font-bold">{greeting}, {displayName}</h1>
-        <p className="mt-1 text-muted">{todayEpisode ? "Tu podcast de hoy está listo" : "Genera tu podcast personalizado del día"}</p>
+      {/* ═══ Hero — Colorful gradient background with greeting ═══ */}
+      <div className="relative -mx-5 lg:-mx-8 -mt-4 mb-2 overflow-hidden rounded-b-[2rem] px-6 pb-12 pt-10"
+        style={{ background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 30%, #F97316 60%, #06B6D4 100%)" }}
+      >
+        <div className="relative z-10 lg:flex lg:items-center lg:justify-between lg:gap-8">
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-bold text-white font-[family-name:var(--font-display)] leading-tight">
+              {greeting},<br />{displayName}
+            </h1>
+            <p className="mt-2 text-[15px] text-white/60">{dateStr}</p>
+
+            {/* Weather + Play pill (Huxe style) */}
+            <div className="mt-6 flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-[14px] text-white/60">
+                <Sun className="h-4 w-4" /> {weather}
+              </span>
+            </div>
+          </div>
+
+          {/* Play button */}
+          <button
+            onClick={() => {
+              if (todayEpisode) {
+                router.push(`/historial/${todayEpisode.id}`);
+              } else if (preferences && !isGenerating) {
+                generatePodcast(preferences);
+              } else if (!hasPreferences) {
+                router.push("/onboarding");
+              }
+            }}
+            disabled={isGenerating}
+            className="mt-6 lg:mt-0 w-full lg:w-auto rounded-full bg-[#7C3AED] px-6 lg:px-8 py-3.5 text-[15px] font-semibold text-white transition-all duration-200 hover:bg-[#6D28D9] active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Play className="h-4 w-4 fill-white" />
+            {todayEpisode ? "Reproducir" : "Generar mi podcast"}
+          </button>
+        </div>
       </div>
 
-      {/* Episodio de hoy / Botón generar */}
-      <div className="glass-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">🎙️ Episodio de hoy</h2>
-        {todayEpisode ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">{todayEpisode.title}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {todayEpisode.topics.map(topicId => {
-                  const t = getTopicById(topicId);
-                  return (
-                    <span key={topicId} className="rounded-full bg-forest/10 px-2.5 py-0.5 text-xs">
-                      {t ? `${t.emoji} ${t.nombre}` : topicId}
-                    </span>
-                  );
-                })}
+      {/* ═══ DeepCast section ═══ */}
+      <DeepCastSection />
+
+      {/* ═══ Keep listening / Today's episode ═══ */}
+      {todayEpisode && (
+        <section>
+          <h2 className="mb-3 flex items-center gap-2 text-[15px] font-bold text-[#111827]">
+            <Clock className="h-4 w-4 text-[#9CA3AF]" />
+            Sigue escuchando
+          </h2>
+          <Link
+            href={`/historial/${todayEpisode.id}`}
+            className="group flex gap-4 glass-card-warm p-4 transition-all duration-200 hover:scale-[1.01]"
+          >
+            <div className="relative shrink-0">
+              <EpisodeThumbnail topics={todayEpisode.topics} size="md" />
+              <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <Play className="h-8 w-8 fill-white text-white" />
               </div>
             </div>
-            <Link href={`/historial/${todayEpisode.id}`} className="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 font-medium text-white hover:bg-forest-light">
-              <Play className="h-4 w-4" />Escuchar
-            </Link>
-          </div>
-        ) : hasPreferences ? (
-          <div className="text-center">
-            <p className="mb-4 text-muted">Aún no has generado el podcast de hoy</p>
-            <button
-              onClick={() => preferences && !isGenerating && generatePodcast(preferences)}
-              disabled={isGenerating || !preferences}
-              className="cursor-pointer rounded-full bg-forest px-6 py-3 font-medium text-white hover:bg-forest-light disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              🎙️ Generar podcast de hoy
-            </button>
-          </div>
-        ) : (
-          <div className="text-center">
-            <p className="mb-4 text-muted">Configura tus preferencias para empezar</p>
-            <button onClick={() => router.push("/onboarding")} className="cursor-pointer rounded-full bg-forest px-6 py-3 font-medium text-white hover:bg-forest-light">
-              Configurar preferencias
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Weekly Digest */}
-      {weeklyDigest && !todayEpisode?.topics.includes("weekly-digest") && (
-        <Link href={`/historial/${weeklyDigest.id}`} className="glass-card flex items-center gap-4 p-5 transition-all duration-300 hover:bg-forest/5">
-          <span className="text-3xl">📋</span>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-medium">Tu resumen de la semana está listo</p>
-              <span className="rounded-full bg-mint/20 px-2 py-0.5 text-[10px] font-semibold text-forest">Semanal</span>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-[15px] font-semibold leading-tight text-[#111827]">{todayEpisode.title}</h3>
+              <p className="mt-0.5 truncate text-[13px] text-[#9CA3AF]">
+                {todayEpisode.topics.map(topicId => { const t = getTopicById(topicId); return t ? t.nombre : topicId; }).join(", ")}
+              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <span className="text-[12px] text-[#9CA3AF]">{todayEpisode.duration} min</span>
+              </div>
             </div>
-            <p className="mt-0.5 text-sm text-muted">{weeklyDigest.title}</p>
+            <ChevronRight className="h-5 w-5 shrink-0 self-center text-[#D1D5DB]" />
+          </Link>
+        </section>
+      )}
+
+      {/* ═══ Generate CTA (no episode yet) ═══ */}
+      {!todayEpisode && hasPreferences && (
+        <div className="glass-card-warm p-6 text-center">
+          <Mic className="mx-auto mb-3 h-10 w-10 text-[#9CA3AF]" />
+          <h3 className="text-lg font-bold text-[#111827]">Genera tu primer podcast</h3>
+          <p className="mt-1 text-[13px] text-[#9CA3AF]">Alex y Sara te ponen al día con las últimas noticias</p>
+          {preferences && preferences.topics.length > 0 && (
+            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+              {preferences.topics.slice(0, 4).map((t) => {
+                const topic = getTopicById(t);
+                return (
+                  <span key={t} className="rounded-full bg-[#F3F4F6] px-2.5 py-0.5 text-[11px] text-[#9CA3AF]">
+                    {topic?.nombre || t}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <button
+            onClick={() => preferences && !isGenerating && generatePodcast(preferences)}
+            disabled={isGenerating || !preferences}
+            className="mt-5 btn-huxe w-full lg:w-auto flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Play className="h-4 w-4 fill-white" />
+            Generar ahora
+          </button>
+        </div>
+      )}
+
+      {!todayEpisode && !hasPreferences && (
+        <div className="glass-card-warm p-6 text-center">
+          <Mic className="mx-auto mb-3 h-10 w-10 text-[#9CA3AF]" />
+          <p className="text-[14px] font-medium text-[#111827]">Configura tus preferencias para empezar</p>
+          <button
+            onClick={() => router.push("/onboarding")}
+            className="mt-5 btn-huxe w-full lg:w-auto"
+          >
+            Configurar preferencias
+          </button>
+        </div>
+      )}
+
+      {/* ═══ Weekly Digest ═══ */}
+      {weeklyDigest && !todayEpisode?.topics.includes("weekly-digest") && (
+        <Link
+          href={`/historial/${weeklyDigest.id}`}
+          className="flex gap-4 glass-card-warm p-4 transition-all duration-200 hover:scale-[1.01] group"
+        >
+          <div className="relative shrink-0">
+            <EpisodeThumbnail topics={["weekly-digest"]} size="sm" />
           </div>
-          <Play className="h-4 w-4 shrink-0 text-forest" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-[15px] font-semibold text-[#111827]">Resumen de la semana</h3>
+              <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[11px] font-medium text-[#6B7280]">Semanal</span>
+            </div>
+            <p className="mt-0.5 truncate text-[13px] text-[#9CA3AF]">{weeklyDigest.title}</p>
+          </div>
+          <ChevronRight className="h-5 w-5 shrink-0 self-center text-[#D1D5DB]" />
         </Link>
       )}
 
-      {/* Horario */}
-      {schedule?.is_active ? (
-        <div className="glass-card flex items-center gap-3 p-4">
-          <span className="text-2xl">📅</span>
+      {/* ═══ Schedule ═══ */}
+      {schedule?.is_active && (
+        <div className="flex items-center gap-3 glass-card p-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F4F6]">
+            <Clock className="h-5 w-5 text-[#6B7280]" />
+          </div>
           <div className="flex-1">
-            <p className="text-sm font-medium">
+            <p className="text-[14px] font-medium text-[#111827]">
               Tu próximo podcast: {schedule.frequency === "daily" ? "todos los días" : schedule.frequency === "weekdays" ? "lunes a viernes" : "días seleccionados"} a las {schedule.time.slice(0, 5)}
             </p>
-            <p className="text-xs text-muted">Generación automática activada</p>
+            <p className="text-[12px] text-[#9CA3AF]">Generación automática activada</p>
           </div>
-        </div>
-      ) : null}
-
-      {/* Últimos episodios */}
-      {recentEpisodes.length > 0 && (
-        <div className="glass-card p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Últimos episodios</h2>
-            <button onClick={onSwitchToHistorial} className="cursor-pointer text-sm text-forest underline hover:text-forest-light">Ver todos →</button>
-          </div>
-          <ul className="space-y-3">
-            {recentEpisodes.map(episode => (
-              <li key={episode.id}>
-                <Link href={`/historial/${episode.id}`} className="group flex items-center justify-between rounded-xl border border-white/[0.08] px-4 py-3 transition-all duration-300 hover:border-forest/20 hover:bg-forest/5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium group-hover:text-forest">{episode.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-light">
-                      {new Date(episode.created_at).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })} · {episode.duration} min
-                    </p>
-                  </div>
-                  {episode.audio_url ? <Headphones className="ml-3 h-4 w-4 shrink-0" /> : <Clock className="ml-3 h-4 w-4 shrink-0 text-muted-light" />}
-                </Link>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 
-      {/* Stats */}
+      {/* ═══ Recent episodes — horizontal scroll ═══ */}
       {recentEpisodes.length > 0 && (
-        <div className="flex gap-4">
-          <div className="flex-1 glass-card p-4 text-center">
-            <p className="text-2xl font-bold">{recentEpisodes.length}</p>
-            <p className="text-xs text-muted">{recentEpisodes.length === 1 ? "episodio" : "episodios"}</p>
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-[#111827]">Episodios recientes</h2>
+            <button onClick={onSwitchToHistorial} className="cursor-pointer text-[13px] text-[#9CA3AF] transition-colors hover:text-[#111827]">Ver todo</button>
           </div>
-          <div className="flex-1 glass-card p-4 text-center">
-            <p className="text-2xl font-bold">{recentEpisodes.reduce((s, e) => s + e.duration, 0)}</p>
-            <p className="text-xs text-muted">minutos generados</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {recentEpisodes.map(episode => (
+              <Link
+                key={episode.id}
+                href={`/historial/${episode.id}`}
+                className="group flex flex-col overflow-hidden glass-card-warm transition-all duration-200 hover:scale-[1.02]"
+              >
+                <div className="relative">
+                  <EpisodeThumbnail topics={episode.topics} size="sm" />
+                  <div className="absolute inset-0 flex items-center justify-center rounded-t-3xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Play className="h-5 w-5 fill-white text-white" />
+                  </div>
+                </div>
+                <div className="p-3">
+                  <h3 className="line-clamp-2 text-[13px] font-semibold leading-tight text-[#111827]">{episode.title}</h3>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] text-[#9CA3AF]">
+                      {episode.duration} min
+                    </span>
+                    <span className="text-[10px] text-[#9CA3AF]">
+                      {new Date(episode.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

@@ -4,6 +4,8 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import Image from "next/image";
+import { Radio } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -33,7 +35,7 @@ function LoginForm() {
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error al iniciar sesión"
+        err instanceof Error ? err.message : "Error al iniciar sesion"
       );
     } finally {
       setLoading(false);
@@ -41,92 +43,104 @@ function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md space-y-8">
-      {/* Logo */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold">
-          <span className="text-white">WaveCast</span>
-        </h1>
-        <p className="mt-2 text-muted">Inicia sesión en tu cuenta</p>
+    <div className="flex min-h-screen bg-[#F9FAFB]">
+      {/* Left: Decorative image (desktop only) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <Image
+          src="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=1200&q=80"
+          alt="Microfono de podcast"
+          fill
+          className="object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#7C3AED]/80 via-[#A855F7]/60 to-[#06B6D4]/40" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
+          <Radio className="h-12 w-12 text-white/90 mb-4" />
+          <h2 className="text-4xl font-extrabold text-white font-[family-name:var(--font-montserrat)] tracking-tight">
+            WaveCast
+          </h2>
+          <p className="mt-3 text-lg text-white/80 max-w-sm">
+            Tu podcast diario personalizado con inteligencia artificial
+          </p>
+        </div>
       </div>
 
-      {/* Formulario */}
-      <form onSubmit={handleLogin} className="space-y-6">
-        <div className="space-y-4 glass-card p-6">
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-1.5 block text-sm font-medium text-dark/80"
-            >
-              Email
-            </label>
+      {/* Right: Login form */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-[#111827]">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex items-center gap-2">
+              <Radio className="h-6 w-6 text-[#7C3AED]" />
+              <span className="text-2xl font-extrabold font-[family-name:var(--font-montserrat)]">WaveCast</span>
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-bold text-center lg:text-left">
+            Iniciar sesion
+          </h1>
+          <p className="mt-2 text-[#6B7280] text-center lg:text-left">
+            Bienvenido de vuelta
+          </p>
+
+          <form onSubmit={handleLogin} className="mt-8 space-y-3">
             <input
-              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="tu@email.com"
+              placeholder="Email"
               className="glass-input w-full"
             />
-          </div>
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1.5 block text-sm font-medium text-dark/80"
-            >
-              Contraseña
-            </label>
             <input
-              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="Tu contraseña"
+              placeholder="Contrasena"
               className="glass-input w-full"
             />
-          </div>
+
+            {error && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-huxe w-full mt-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Iniciando sesion..." : "Iniciar sesion"}
+            </button>
+          </form>
+
+          <Link href="/signup" className="btn-huxe-outline w-full block text-center mt-3">
+            Crear cuenta
+          </Link>
+
+          <p className="text-center text-[12px] text-[#9CA3AF] mt-4">
+            Al iniciar sesion aceptas nuestros{" "}
+            <span className="underline">Terminos</span> y{" "}
+            <span className="underline">Politica de Privacidad</span>.
+          </p>
         </div>
-
-        {error && (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full cursor-pointer rounded-full bg-forest px-6 py-3 font-medium text-white transition-all duration-300 hover:bg-forest-light disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? "Iniciando sesión..." : "Iniciar sesión"}
-        </button>
-      </form>
-
-      <p className="text-center text-sm text-muted-light">
-        ¿No tienes cuenta?{" "}
-        <Link
-          href="/signup"
-          className="text-forest underline transition-colors duration-300 hover:text-forest-light"
-        >
-          Regístrate
-        </Link>
-      </p>
+      </div>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-cream px-4 text-dark">
-      <Suspense
-        fallback={
-          <div className="text-muted">Cargando...</div>
-        }
-      >
-        <LoginForm />
-      </Suspense>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]">
+          <div className="text-[#9CA3AF]">Cargando...</div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
