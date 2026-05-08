@@ -71,16 +71,16 @@ export function DeepCastSection() {
   return (
     <section>
       <div className="mb-4 flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-[#7C3AED]" />
-        <h2 className="text-xl font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">
+        <Sparkles className="h-5 w-5 text-[#E07856]" strokeWidth={1.5} />
+        <h2 className="text-xl font-normal text-[#1A1614] font-[family-name:var(--font-instrument-serif)]">
           DeepCast
         </h2>
-        <span className="rounded-full bg-[#7C3AED]/15 px-2 py-0.5 text-[10px] font-semibold text-[#7C3AED]">
+        <span className="rounded-full bg-[#E07856]/10 px-2 py-0.5 text-[10px] font-medium text-[#E07856]">
           Nuevo
         </span>
       </div>
 
-      <p className="mb-4 text-[13px] text-[#6B7280]">
+      <p className="mb-4 text-[13px] text-[#6B5D54]">
         Pregunta lo que quieras y genera un podcast en profundidad al instante.
       </p>
 
@@ -104,8 +104,8 @@ export function DeepCastSection() {
       {activeDeepcast && (
         <div className="mt-4">
           <div className="mb-2 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#7C3AED]">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-[#7C3AED]" />
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#E07856]">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[#E07856]" />
               Recién generado
             </span>
           </div>
@@ -117,13 +117,13 @@ export function DeepCastSection() {
       {isLoading && (
         <div className="mt-4 space-y-3">
           {[0, 1].map((i) => (
-            <div key={i} className="animate-pulse rounded-2xl bg-[#F3F4F6] p-4">
+            <div key={i} className="animate-pulse rounded-2xl bg-[#F5EDE4]/60 p-4">
               <div className="flex gap-3">
-                <div className="h-14 w-14 rounded-xl bg-[#F3F4F6]" />
+                <div className="h-14 w-14 rounded-xl bg-[#E8DFD3]/40" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 w-16 rounded bg-[#F3F4F6]" />
-                  <div className="h-4 w-3/4 rounded bg-[#F3F4F6]" />
-                  <div className="h-3 w-1/2 rounded bg-[#F3F4F6]" />
+                  <div className="h-3 w-16 rounded bg-[#E8DFD3]/40" />
+                  <div className="h-4 w-3/4 rounded bg-[#E8DFD3]/40" />
+                  <div className="h-3 w-1/2 rounded bg-[#E8DFD3]/40" />
                 </div>
               </div>
             </div>
@@ -134,7 +134,7 @@ export function DeepCastSection() {
       {/* Recent deepcasts */}
       {!isLoading && recentDeepcasts.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-3 text-[14px] font-semibold text-[#111827]">
+          <h3 className="mb-3 text-[14px] font-medium text-[#1A1614]">
             Tus DeepCasts recientes
           </h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -147,12 +147,12 @@ export function DeepCastSection() {
 
       {/* Empty state (no deepcasts and not loading) */}
       {!isLoading && deepcasts.length === 0 && !activeDeepcast && (
-        <div className="mt-6 flex flex-col items-center rounded-2xl bg-gradient-to-b from-[#7C3AED]/5 to-transparent p-8 text-center">
-          <Sparkles className="mb-3 h-10 w-10 text-[#7C3AED]/40" />
-          <p className="text-[14px] font-medium text-[#111827]">
+        <div className="mt-6 flex flex-col items-center rounded-2xl bg-white/40 backdrop-blur-xl border border-white/30 p-8 text-center">
+          <Sparkles className="mb-3 h-10 w-10 text-[#D4A574]/60" strokeWidth={1.5} />
+          <p className="text-[14px] font-medium text-[#1A1614]">
             Tu primer DeepCast te espera
           </p>
-          <p className="mt-1 text-[13px] text-[#9CA3AF]">
+          <p className="mt-1 text-[13px] text-[#9B8E84]">
             Escribe cualquier tema o pregunta y genera un podcast personalizado en segundos.
           </p>
         </div>
