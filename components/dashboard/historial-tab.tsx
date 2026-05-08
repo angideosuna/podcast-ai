@@ -163,17 +163,22 @@ export function HistorialTab({ userId }: HistorialTabProps) {
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-8">
       <div>
-        <h1 className="text-3xl font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">Tu biblioteca</h1>
-        <p className="mt-1 text-[13px] text-[#9CA3AF]">
+        <h1
+          className="text-3xl text-[#1A1614]"
+          style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+        >
+          Tu biblioteca
+        </h1>
+        <p className="mt-1 text-[13px] text-[#9B8E84]">
           {loading ? "Cargando..." : total === 0 && !hasActiveFilters ? "Aún no tienes episodios" : `${total} ${total === 1 ? "episodio" : "episodios"}${hasActiveFilters ? " encontrados" : " generados"}`}
         </p>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B8E84]" strokeWidth={1.5} />
         <input type="text" value={searchText} onChange={e => setSearchText(e.target.value)} placeholder="Buscar episodios..." className="glass-input w-full !pl-10 !pr-10" />
-        {searchText && <button onClick={() => setSearchText("")} className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer rounded-full p-1 text-[#9CA3AF] hover:text-[#111827]"><X className="h-4 w-4" /></button>}
+        {searchText && <button onClick={() => setSearchText("")} className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer rounded-full p-1 text-[#9B8E84] hover:text-[#1A1614]"><X className="h-4 w-4" strokeWidth={1.5} /></button>}
       </div>
 
       {/* Filters — all pills */}
@@ -185,7 +190,7 @@ export function HistorialTab({ userId }: HistorialTabProps) {
             if (!topic) return null;
             const active = topicFilters.includes(topicId);
             return (
-              <button key={topicId} onClick={() => toggleTopicFilter(topicId)} className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-200 ${active ? "bg-[#7C3AED] text-white" : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"}`}>
+              <button key={topicId} onClick={() => toggleTopicFilter(topicId)} className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-500 ease-out ${active ? "bg-[#E07856] text-white" : "bg-[#F5EDE4] text-[#6B5D54] hover:bg-[#E8DFD3] hover:text-[#1A1614]"}`}>
                 {topic.emoji} {topic.nombre}
               </button>
             );
@@ -194,30 +199,30 @@ export function HistorialTab({ userId }: HistorialTabProps) {
         {/* Tone + date pills */}
         <div className="flex flex-wrap items-center gap-2">
           {TONE_OPTIONS.map(opt => (
-            <button key={opt.value} onClick={() => setToneFilter(prev => prev === opt.value ? "" : opt.value)} className={`cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-200 ${toneFilter === opt.value ? "bg-[#7C3AED] text-white" : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"}`}>
+            <button key={opt.value} onClick={() => setToneFilter(prev => prev === opt.value ? "" : opt.value)} className={`cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-500 ease-out ${toneFilter === opt.value ? "bg-[#E07856] text-white" : "bg-[#F5EDE4] text-[#6B5D54] hover:bg-[#E8DFD3] hover:text-[#1A1614]"}`}>
               {opt.label}
             </button>
           ))}
-          <span className="mx-0.5 h-4 w-px bg-[#E5E7EB]" />
+          <span className="mx-0.5 h-4 w-px bg-[#E8DFD3]/60" />
           {DATE_OPTIONS.map(opt => (
-            <button key={opt.value} onClick={() => setDateFilter(opt.value)} className={`cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-200 ${dateFilter === opt.value ? "bg-[#7C3AED] text-white" : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"}`}>
+            <button key={opt.value} onClick={() => setDateFilter(opt.value)} className={`cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-500 ease-out ${dateFilter === opt.value ? "bg-[#E07856] text-white" : "bg-[#F5EDE4] text-[#6B5D54] hover:bg-[#E8DFD3] hover:text-[#1A1614]"}`}>
               {opt.label}
             </button>
           ))}
-          {hasActiveFilters && <button onClick={clearFilters} className="ml-auto cursor-pointer text-[12px] text-[#9CA3AF] transition-colors hover:text-[#7C3AED]">Limpiar</button>}
+          {hasActiveFilters && <button onClick={clearFilters} className="ml-auto cursor-pointer text-[12px] text-[#9B8E84] transition-all duration-500 ease-out hover:text-[#E07856]">Limpiar</button>}
         </div>
       </div>
 
       {/* Episodes list */}
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#7C3AED]" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#D4A574]" /></div>
       ) : episodes.length === 0 ? (
-        <div className="rounded-3xl bg-gradient-to-br from-white to-[#F9FAFB] p-12 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F9FAFB]">
-            {hasActiveFilters ? <Search className="h-7 w-7 text-[#6B7280]" /> : <Play className="h-7 w-7 fill-[#a0a0a0] text-[#6B7280]" />}
+        <div className="rounded-3xl glass-card p-12 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F5EDE4]">
+            {hasActiveFilters ? <Search className="h-7 w-7 text-[#6B5D54]" strokeWidth={1.5} /> : <Play className="h-7 w-7 fill-[#D4A574] text-[#6B5D54]" strokeWidth={1.5} />}
           </div>
-          <p className="text-[15px] font-medium text-[#6B7280]">{hasActiveFilters ? "No se encontraron episodios con estos filtros" : "Genera tu primer podcast para empezar"}</p>
-          <button onClick={() => hasActiveFilters ? clearFilters() : router.push("/dashboard")} className="mt-5 cursor-pointer rounded-full bg-[#7C3AED] px-6 py-3 text-[14px] font-semibold text-white transition-all duration-200 hover:bg-[#A855F7] hover:scale-105">
+          <p className="text-[15px] font-medium text-[#6B5D54]">{hasActiveFilters ? "No se encontraron episodios con estos filtros" : "Genera tu primer podcast para empezar"}</p>
+          <button onClick={() => hasActiveFilters ? clearFilters() : router.push("/dashboard")} className="mt-5 cursor-pointer rounded-full bg-[#E07856] px-6 py-3 text-[14px] font-medium text-white transition-all duration-500 ease-out hover:bg-[#C96A4A] hover:scale-105">
             {hasActiveFilters ? "Limpiar filtros" : "Generar podcast"}
           </button>
         </div>
@@ -229,32 +234,32 @@ export function HistorialTab({ userId }: HistorialTabProps) {
               <Link
                 key={episode.id}
                 href={`/historial/${episode.id}`}
-                className="group block break-inside-avoid overflow-hidden rounded-3xl bg-white border border-[#E5E7EB] transition-all duration-200 hover:scale-[1.02]"
+                className="group block break-inside-avoid overflow-hidden rounded-3xl bg-white/40 backdrop-blur-xl transition-all duration-500 ease-out hover:scale-[1.02]"
               >
                 {/* Thumbnail — taller for first 2, standard for rest */}
                 <div className={`relative w-full overflow-hidden ${idx < 2 ? "h-[140px]" : "h-[100px]"}`}>
                   <EpisodeThumbnail topics={episode.topics} size="lg" className="!w-full !h-full !rounded-none" coverImageUrl={(episode as EpisodeSummary & { cover_image_url?: string }).cover_image_url ?? undefined} />
                   {/* Play overlay on hover */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7C3AED]">
-                      <Play className="h-4 w-4 fill-white text-white" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E07856]">
+                      <Play className="h-4 w-4 fill-white text-white" strokeWidth={1.5} />
                     </div>
                   </div>
                   {/* Visibility badge */}
                   <button
                     onClick={(e) => handleToggleVisibility(e, episode.id)}
                     disabled={togglingId === episode.id}
-                    className={`absolute top-2 right-2 z-10 rounded-full p-1.5 backdrop-blur-sm transition-all duration-200 disabled:opacity-50 ${
+                    className={`absolute top-2 right-2 z-10 rounded-full p-1.5 backdrop-blur-sm transition-all duration-500 ease-out disabled:opacity-50 ${
                       episode.is_shared
-                        ? "bg-[#7C3AED]/20 text-[#7C3AED]"
-                        : "bg-black/40 text-[#6B7280]"
+                        ? "bg-[#E07856]/20 text-[#E07856]"
+                        : "bg-black/30 text-white/60"
                     }`}
                   >
-                    {episode.is_shared ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                    {episode.is_shared ? <Globe className="h-3 w-3" strokeWidth={1.5} /> : <Lock className="h-3 w-3" strokeWidth={1.5} />}
                   </button>
                   {/* Weekly badge */}
                   {episode.topics.includes("weekly-digest") && (
-                    <span className="absolute top-2 left-2 rounded-full bg-[#7C3AED]/90 px-2 py-0.5 text-[10px] font-semibold text-white">
+                    <span className="absolute top-2 left-2 rounded-full bg-[#E07856]/90 px-2 py-0.5 text-[10px] font-medium text-white">
                       Semanal
                     </span>
                   )}
@@ -262,23 +267,23 @@ export function HistorialTab({ userId }: HistorialTabProps) {
 
                 {/* Info */}
                 <div className="p-3.5">
-                  <h3 className="text-[14px] font-semibold leading-tight text-[#111827] line-clamp-2">
+                  <h3 className="text-[14px] font-medium leading-tight text-[#1A1614] line-clamp-2">
                     {episode.title}
                   </h3>
-                  <p className="mt-1 text-[12px] text-[#9CA3AF] line-clamp-1">
+                  <p className="mt-1 text-[12px] text-[#9B8E84] line-clamp-1">
                     {episode.topics.map(topicId => {
                       const topic = getTopicById(topicId);
                       return topic ? topic.nombre : topicId;
                     }).join(", ")}
                   </p>
                   <div className="mt-2.5 flex items-center gap-2">
-                    <span className="rounded-full bg-[#F9FAFB] px-2 py-0.5 text-[11px] font-medium text-[#6B7280]">
+                    <span className="rounded-full bg-[#F5EDE4] px-2 py-0.5 text-[11px] font-medium text-[#6B5D54]">
                       {episode.duration} min
                     </span>
-                    <span className="rounded-full bg-[#F9FAFB] px-2 py-0.5 text-[11px] font-medium text-[#9CA3AF]">
+                    <span className="rounded-full bg-[#F5EDE4] px-2 py-0.5 text-[11px] font-medium text-[#9B8E84]">
                       {episode.tone}
                     </span>
-                    <span className="ml-auto text-[11px] text-[#9CA3AF]">
+                    <span className="ml-auto text-[11px] text-[#9B8E84]">
                       {new Date(episode.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                     </span>
                   </div>
@@ -288,7 +293,7 @@ export function HistorialTab({ userId }: HistorialTabProps) {
           </div>
           {hasMore && (
             <div className="flex justify-center pt-4">
-              <button onClick={handleLoadMore} disabled={loadingMore} className="cursor-pointer rounded-full bg-[#F3F4F6] px-6 py-2.5 text-[13px] font-semibold text-[#111827] transition-all duration-200 hover:bg-[#F3F4F6] hover:scale-105 disabled:opacity-50">
+              <button onClick={handleLoadMore} disabled={loadingMore} className="cursor-pointer rounded-full bg-[#F5EDE4] px-6 py-2.5 text-[13px] font-medium text-[#1A1614] transition-all duration-500 ease-out hover:bg-[#E8DFD3] hover:scale-105 disabled:opacity-50">
                 {loadingMore ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Cargando...</span> : "Cargar más"}
               </button>
             </div>
