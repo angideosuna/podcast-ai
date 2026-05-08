@@ -77,10 +77,10 @@ function findDualVoices(): { alex: SpeechSynthesisVoice | null; sara: SpeechSynt
 function SpeakerAvatar({ label, active }: { label: string; active: boolean }) {
   return (
     <div
-      className={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold transition-all duration-300 ${
+      className={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-medium transition-all duration-500 ease-out ${
         active
-          ? "bg-[#7C3AED] text-white ring-2 ring-[#7C3AED] ring-offset-2 ring-offset-white scale-110"
-          : "bg-[#F3F4F6] text-[#9CA3AF]"
+          ? "bg-[#E07856] text-white ring-2 ring-[#E07856] ring-offset-2 ring-offset-white/60 scale-110"
+          : "bg-[#F5EDE4] text-[#9B8E84]"
       }`}
     >
       {label}
@@ -304,13 +304,13 @@ export function BrowserAudioPlayer({ script, voice, episodeId, deepcastId, episo
   if (!voicesLoaded) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E5E7EB] bg-white shadow-lg md:left-[72px] lg:left-[240px]">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/30 bg-white/60 backdrop-blur-xl shadow-[0_-2px_16px_rgba(180,140,100,0.08)] md:left-[72px] lg:left-[240px]">
       {/* Segment text display for dual voice */}
       {hasDualVoice && activeSpeaker && currentSegmentIndex >= 0 && isPlaying && (
-        <div className="border-b border-[#E5E7EB] px-4 py-1.5">
+        <div className="border-b border-[#E8DFD3]/40 px-4 py-1.5">
           <div className="flex items-center gap-2">
-            <span className="shrink-0 text-[11px] font-bold text-[#7C3AED]">{activeSpeaker}</span>
-            <p className="truncate text-[12px] text-[#6B7280]">
+            <span className="shrink-0 text-[11px] font-medium text-[#E07856]">{activeSpeaker}</span>
+            <p className="truncate text-[12px] text-[#6B5D54]">
               {segments[currentSegmentIndex]?.text.slice(0, 100)}
               {(segments[currentSegmentIndex]?.text.length ?? 0) > 100 ? "..." : ""}
             </p>
@@ -330,30 +330,30 @@ export function BrowserAudioPlayer({ script, voice, episodeId, deepcastId, episo
         {isPlaying ? (
           <button
             onClick={handlePause}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#7C3AED] text-white transition-transform duration-300 hover:scale-105"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#E07856] text-white transition-all duration-500 ease-out hover:scale-105"
           >
-            <Pause className="h-5 w-5" />
+            <Pause className="h-5 w-5" strokeWidth={1.5} />
           </button>
         ) : (
           <button
             onClick={handlePlay}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#7C3AED] text-white transition-transform duration-300 hover:scale-105"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#E07856] text-white transition-all duration-500 ease-out hover:scale-105"
           >
-            <Play className="ml-0.5 h-5 w-5" />
+            <Play className="ml-0.5 h-5 w-5" strokeWidth={1.5} />
           </button>
         )}
 
         {(isPlaying || isPaused) && (
           <button
             onClick={handleStop}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white border border-[#E5E7EB] text-[#6B7280] transition-all duration-300 hover:bg-[#7C3AED]/10 hover:text-[#7C3AED]"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/40 border border-white/30 text-[#6B5D54] transition-all duration-500 ease-out hover:bg-[#E07856]/10 hover:text-[#E07856]"
           >
-            <Square className="h-4 w-4" />
+            <Square className="h-4 w-4" strokeWidth={1.5} />
           </button>
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium text-[#111827]">
+          <span className="truncate text-sm font-medium text-[#1A1614]">
             {voiceState.isProcessing
               ? "Alex y Sara piensan..."
               : voiceState.isAnswering
@@ -364,8 +364,8 @@ export function BrowserAudioPlayer({ script, voice, episodeId, deepcastId, episo
                     ? "En pausa"
                     : episodeTitle || "Pulsa play para escuchar"}
           </span>
-          <span className="text-xs text-[#9CA3AF]">
-            <Volume2 className="mr-1 inline h-3 w-3" />
+          <span className="text-xs text-[#9B8E84]">
+            <Volume2 className="mr-1 inline h-3 w-3" strokeWidth={1.5} />
             {voiceName} (es-ES)
           </span>
         </div>
@@ -375,18 +375,18 @@ export function BrowserAudioPlayer({ script, voice, episodeId, deepcastId, episo
           <button
             onClick={voiceState.isListening ? stopListening : startListening}
             disabled={voiceState.isProcessing || voiceState.isAnswering}
-            className={`relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-500 ease-out disabled:cursor-not-allowed disabled:opacity-50 ${
               voiceState.isListening
                 ? "border border-red-500 bg-red-500/20"
                 : voiceState.isProcessing || voiceState.isAnswering
-                  ? "border border-[#7C3AED]/30 bg-[#7C3AED]/10"
-                  : "bg-white border border-[#E5E7EB] hover:bg-[#F3F4F6]"
+                  ? "border border-[#E07856]/30 bg-[#E07856]/10"
+                  : "bg-white/40 border border-white/30 hover:bg-[#F5EDE4]"
             }`}
           >
             {voiceState.isListening && (
               <span className="absolute inset-0 animate-ping rounded-full bg-red-500/20" />
             )}
-            <svg className={`relative z-10 h-4 w-4 ${voiceState.isListening ? "text-red-400" : voiceState.isProcessing || voiceState.isAnswering ? "text-[#7C3AED]" : "text-[#6B7280]"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className={`relative z-10 h-4 w-4 ${voiceState.isListening ? "text-red-400" : voiceState.isProcessing || voiceState.isAnswering ? "text-[#E07856]" : "text-[#6B5D54]"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
             </svg>
