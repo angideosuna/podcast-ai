@@ -28,18 +28,18 @@ interface Round {
 }
 
 const ROUNDS: Round[] = [
-  { id: "creators", label: "Creadores", field: "fav_creators", icon: Users, items: UNIVERSE_CREATORS, gradient: "from-[#7C3AED] to-[#6D28D9]", subtitle: "Creador de contenido" },
-  { id: "podcasts", label: "Podcasts", field: "fav_podcasts", icon: Headphones, items: UNIVERSE_PODCASTS, gradient: "from-[#F97316] to-[#EA580C]", subtitle: "Podcast" },
+  { id: "creators", label: "Creadores", field: "fav_creators", icon: Users, items: UNIVERSE_CREATORS, gradient: "from-[#E07856] to-[#C96A4A]", subtitle: "Creador de contenido" },
+  { id: "podcasts", label: "Podcasts", field: "fav_podcasts", icon: Headphones, items: UNIVERSE_PODCASTS, gradient: "from-[#D4A574] to-[#C4956A]", subtitle: "Podcast" },
   { id: "topics", label: "Temas", field: "deep_interests", icon: Brain, items: UNIVERSE_DEEP_INTERESTS, gradient: "", subtitle: "" },
-  { id: "referents", label: "Referentes", field: "referents", icon: Star, items: UNIVERSE_REFERENTS, gradient: "from-[#06B6D4] to-[#0891B2]", subtitle: "Figura referente" },
+  { id: "referents", label: "Referentes", field: "referents", icon: Star, items: UNIVERSE_REFERENTS, gradient: "from-[#9B7B8E] to-[#8A6A7D]", subtitle: "Figura referente" },
 ];
 
 const TOPIC_GRADIENTS: Record<string, string> = {
-  "Tecnología": "from-[#7C3AED] to-[#6D28D9]",
-  "Ciencia": "from-[#06B6D4] to-[#0891B2]",
-  "Negocios": "from-[#F97316] to-[#EA580C]",
-  "Cultura": "from-pink-500 to-[#7C3AED]",
-  "Salud": "from-emerald-500 to-[#06B6D4]",
+  "Tecnología": "from-[#E07856] to-[#C96A4A]",
+  "Ciencia": "from-[#9B7B8E] to-[#8A6A7D]",
+  "Negocios": "from-[#D4A574] to-[#C4956A]",
+  "Cultura": "from-[#D4A574] to-[#9B7B8E]",
+  "Salud": "from-[#A8C4A0] to-[#9B7B8E]",
 };
 
 const SWIPE_THRESHOLD = 100;
@@ -154,7 +154,7 @@ function SwipeCard({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className="relative h-[420px] w-[320px] touch-none select-none overflow-hidden rounded-2xl bg-white border border-[#E5E7EB]"
+        className="relative h-[420px] w-[320px] touch-none select-none overflow-hidden rounded-2xl bg-white/40 backdrop-blur-xl border border-white/30"
         style={{ cursor: "grab", willChange: "transform" }}
       >
         {/* ── Image area (60% = 252px) ── */}
@@ -169,7 +169,7 @@ function SwipeCard({
                 onError={() => setImgError(true)}
                 draggable={false}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-transparent" />
             </>
           ) : (
             <>
@@ -186,17 +186,17 @@ function SwipeCard({
 
           {/* Like overlay */}
           {dragDir === "right" && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#7C3AED]/30">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border-[5px] border-[#7C3AED] bg-black/40">
-                <Check className="h-12 w-12 text-[#7C3AED]" strokeWidth={3} />
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#E07856]/30">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border-[5px] border-[#E07856] bg-[#1A1614]/40">
+                <Check className="h-12 w-12 text-[#E07856]" strokeWidth={2.5} />
               </div>
             </div>
           )}
           {/* Nope overlay */}
           {dragDir === "left" && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-red-500/30">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border-[5px] border-red-500 bg-black/40">
-                <X className="h-12 w-12 text-red-500" strokeWidth={3} />
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#9B8E84]/30">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border-[5px] border-[#9B8E84] bg-[#1A1614]/40">
+                <X className="h-12 w-12 text-[#9B8E84]" strokeWidth={2.5} />
               </div>
             </div>
           )}
@@ -204,14 +204,14 @@ function SwipeCard({
 
         {/* ── Info area ── */}
         <div className="flex flex-1 flex-col justify-center px-5 py-4">
-          <span className="mb-1.5 inline-flex w-fit rounded-full bg-[#7C3AED]/15 px-2.5 py-0.5 text-[11px] font-medium text-[#7C3AED]">
+          <span className="mb-1.5 inline-flex w-fit rounded-full bg-[#E07856]/10 px-2.5 py-0.5 text-[11px] font-medium text-[#E07856]">
             {subtitle}
           </span>
-          <h3 className="text-[22px] font-bold leading-tight text-[#111827] font-[family-name:var(--font-montserrat)]">
+          <h3 className="text-[22px] font-normal leading-tight text-[#1A1614] font-[family-name:var(--font-instrument-serif)]">
             {item.label}
           </h3>
           {description && (
-            <p className="mt-1.5 text-[13px] leading-relaxed text-[#9CA3AF] line-clamp-2">
+            <p className="mt-1.5 text-[13px] leading-relaxed text-[#9B8E84] line-clamp-2">
               {description}
             </p>
           )}
@@ -223,16 +223,16 @@ function SwipeCard({
         <button
           type="button"
           onClick={() => btnRef.current("left")}
-          className="flex h-[56px] w-[56px] cursor-pointer items-center justify-center rounded-full border-2 border-red-500/40 bg-red-500/10 text-red-400 transition-all duration-200 hover:border-red-500 hover:bg-red-500/20 active:scale-90"
+          className="flex h-[56px] w-[56px] cursor-pointer items-center justify-center rounded-full border-2 border-[#9B8E84]/40 bg-[#9B8E84]/10 text-[#9B8E84] transition-all duration-500 ease-out hover:border-[#9B8E84] hover:bg-[#9B8E84]/20 active:scale-90"
         >
-          <X className="h-7 w-7" strokeWidth={2.5} />
+          <X className="h-7 w-7" strokeWidth={1.5} />
         </button>
         <button
           type="button"
           onClick={() => btnRef.current("right")}
-          className="flex h-[56px] w-[56px] cursor-pointer items-center justify-center rounded-full border-2 border-[#7C3AED]/40 bg-[#7C3AED]/10 text-[#7C3AED] transition-all duration-200 hover:border-[#7C3AED] hover:bg-[#7C3AED]/20 active:scale-90"
+          className="flex h-[56px] w-[56px] cursor-pointer items-center justify-center rounded-full border-2 border-[#E07856]/40 bg-[#E07856]/10 text-[#E07856] transition-all duration-500 ease-out hover:border-[#E07856] hover:bg-[#E07856]/20 active:scale-90"
         >
-          <Check className="h-7 w-7" strokeWidth={2.5} />
+          <Check className="h-7 w-7" strokeWidth={1.5} />
         </button>
       </div>
     </div>
@@ -264,12 +264,12 @@ function ProgressHeader({
         {ROUNDS.map((_, i) => (
           <div
             key={i}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
+            className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
               i < roundIdx
-                ? "w-8 bg-[#7C3AED]"
+                ? "w-8 bg-[#E07856]"
                 : i === roundIdx
-                  ? "w-12 bg-[#7C3AED]"
-                  : "w-8 bg-[#F3F4F6]"
+                  ? "w-12 bg-[#E07856]"
+                  : "w-8 bg-[#F5EDE4]"
             }`}
           />
         ))}
@@ -277,17 +277,17 @@ function ProgressHeader({
 
       {/* Round label + counter */}
       <div className="flex items-center justify-center gap-2">
-        <Icon className="h-5 w-5 text-[#7C3AED]" />
-        <span className="text-[15px] font-semibold text-[#111827]">{round.label}</span>
-        <span className="text-[13px] text-[#9CA3AF]">
+        <Icon className="h-5 w-5 text-[#E07856]" strokeWidth={1.5} />
+        <span className="text-[15px] font-medium text-[#1A1614]">{round.label}</span>
+        <span className="text-[13px] text-[#9B8E84]">
           {cardsDone}/{cardsTotal}
         </span>
       </div>
 
       {/* Thin progress bar */}
-      <div className="mt-2.5 h-[3px] w-full overflow-hidden rounded-full bg-[#F3F4F6]">
+      <div className="mt-2.5 h-[3px] w-full overflow-hidden rounded-full bg-[#F5EDE4]">
         <div
-          className="h-full rounded-full bg-[#7C3AED] transition-all duration-300"
+          className="h-full rounded-full bg-[#E07856] transition-all duration-500 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -302,19 +302,19 @@ function ProgressHeader({
 function FloatingCounter({ count, emojis }: { count: number; emojis: string[] }) {
   if (count === 0) return null;
   return (
-    <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-[#E5E7EB] bg-[#F3F4F6] px-4 py-2.5 shadow-lg">
+    <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-white/30 bg-white/60 backdrop-blur-xl px-4 py-2.5 shadow-[0_2px_16px_rgba(180,140,100,0.10)]">
       <div className="flex -space-x-2">
         {emojis.slice(-3).map((e, i) => (
           <div
             key={i}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E5E7EB] bg-[#F3F4F6] text-sm"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E8DFD3] bg-[#F5EDE4] text-sm"
             style={{ zIndex: i }}
           >
             {e}
           </div>
         ))}
       </div>
-      <span className="text-[13px] font-semibold text-[#111827]">
+      <span className="text-[13px] font-medium text-[#1A1614]">
         {count} seleccionado{count !== 1 ? "s" : ""}
       </span>
     </div>
@@ -345,9 +345,9 @@ function HorizontalRow({
   return (
     <section className="mb-6">
       <div className="mb-3 flex items-center gap-2 px-1">
-        <Icon className="h-4 w-4 text-[#7C3AED]" />
-        <h3 className="text-[15px] font-semibold text-[#111827]">{round.label}</h3>
-        <span className="text-[12px] text-[#9CA3AF]">{items.length}</span>
+        <Icon className="h-4 w-4 text-[#E07856]" strokeWidth={1.5} />
+        <h3 className="text-[15px] font-medium text-[#1A1614]">{round.label}</h3>
+        <span className="text-[12px] text-[#9B8E84]">{items.length}</span>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 pb-2">
         {items.map((item) => {
@@ -357,24 +357,24 @@ function HorizontalRow({
               key={item.id}
               type="button"
               onClick={() => onRemove(round.field, item.id)}
-              className="group flex flex-col items-center gap-2 rounded-2xl p-2 transition-all duration-200 hover:bg-[#F9FAFB]"
+              className="group flex flex-col items-center gap-2 rounded-2xl p-2 transition-all duration-500 ease-out hover:bg-white/30"
             >
               {/* Avatar/Cover */}
-              <div className="relative h-20 w-20 overflow-hidden rounded-full bg-[#F3F4F6] ring-2 ring-[#E5E7EB]">
+              <div className="relative h-20 w-20 overflow-hidden rounded-full bg-[#F5EDE4] ring-2 ring-[#E8DFD3]">
                 {imageUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={imageUrl} alt={item.label} className="h-full w-full object-cover" />
                 ) : (
-                  <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${round.gradient || "from-gray-600 to-gray-800"}`}>
+                  <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${round.gradient || "from-[#9B8E84] to-[#6B5D54]"}`}>
                     <span className="text-2xl">{item.emoji}</span>
                   </div>
                 )}
                 {/* Remove overlay on hover */}
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-                  <X className="h-5 w-5 text-red-400" />
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[#1A1614]/60 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                  <X className="h-5 w-5 text-[#E8DFD3]" strokeWidth={1.5} />
                 </div>
               </div>
-              <span className="w-full truncate text-center text-[11px] font-medium text-[#6B7280] group-hover:text-[#111827]">
+              <span className="w-full truncate text-center text-[11px] font-medium text-[#6B5D54] group-hover:text-[#1A1614]">
                 {item.label}
               </span>
             </button>
@@ -417,10 +417,10 @@ function SummaryScreen({
     <div className="mx-auto max-w-4xl px-4 pt-6 pb-28 lg:px-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#111827] font-[family-name:var(--font-montserrat)]">
+        <h1 className="text-2xl font-normal text-[#1A1614] font-[family-name:var(--font-instrument-serif)]">
           Tu Universo
         </h1>
-        <p className="mt-1 text-[13px] text-[#6B7280]">
+        <p className="mt-1 text-[13px] text-[#6B5D54]">
           {total} elemento{total !== 1 ? "s" : ""} seleccionado{total !== 1 ? "s" : ""}
         </p>
       </div>
@@ -438,8 +438,8 @@ function SummaryScreen({
       {/* Custom interests */}
       <section className="mb-6">
         <div className="mb-3 flex items-center gap-2 px-1">
-          <MessageSquare className="h-4 w-4 text-[#7C3AED]" />
-          <h3 className="text-[15px] font-semibold text-[#111827]">Tus sugerencias</h3>
+          <MessageSquare className="h-4 w-4 text-[#E07856]" strokeWidth={1.5} />
+          <h3 className="text-[15px] font-medium text-[#1A1614]">Tus sugerencias</h3>
         </div>
 
         {custom.length > 0 && (
@@ -449,7 +449,7 @@ function SummaryScreen({
                 key={t}
                 type="button"
                 onClick={() => onRemoveCustom(t)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#7C3AED]/30 bg-[#7C3AED]/10 px-3 py-1.5 text-[13px] font-medium text-[#7C3AED] transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E07856]/30 bg-[#E07856]/10 px-3 py-1.5 text-[13px] font-medium text-[#E07856] transition-all duration-500 ease-out hover:border-[#9B8E84]/30 hover:bg-[#9B8E84]/10 hover:text-[#9B8E84]"
               >
                 {t}
                 <X className="ml-0.5 h-3 w-3" />
@@ -466,28 +466,28 @@ function SummaryScreen({
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
             placeholder="Ej: Tengo un Plan, Filosofía estoica..."
             maxLength={60}
-            className="flex-1 rounded-2xl bg-[#F3F4F6] px-4 py-2.5 text-[13px] text-[#111827] placeholder-[#9CA3AF] outline-none transition-colors focus:bg-white focus:border focus:border-[#E5E7EB] focus:ring-2 focus:ring-[#7C3AED]/30"
+            className="flex-1 rounded-2xl bg-[#F5EDE4] px-4 py-2.5 text-[13px] text-[#1A1614] placeholder-[#9B8E84] outline-none transition-all duration-500 ease-out focus:bg-white/60 focus:backdrop-blur-xl focus:border focus:border-white/30 focus:ring-2 focus:ring-[#E07856]/30"
           />
           <button
             type="button"
             onClick={addCustom}
             disabled={!input.trim()}
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#7C3AED] text-white transition-colors hover:bg-[#A855F7] disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#E07856] text-white transition-all duration-500 ease-out hover:bg-[#D4A574] disabled:cursor-not-allowed disabled:opacity-30"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-5 w-5" strokeWidth={1.5} />
           </button>
         </div>
       </section>
 
       {total === 0 && (
-        <div className="rounded-3xl bg-gradient-to-br from-white to-[#F9FAFB] p-12 text-center h-[350px] flex flex-col items-center justify-center">
-          <Sparkles className="h-[120px] w-[120px] text-[#9CA3AF] mb-6" />
-          <p className="text-[16px] font-medium text-[#6B7280]">No has seleccionado nada aún.</p>
-          <p className="mt-1 text-[13px] text-[#9CA3AF]">Explora para personalizar tus podcasts.</p>
+        <div className="rounded-3xl bg-white/40 backdrop-blur-xl border border-white/30 p-12 text-center h-[350px] flex flex-col items-center justify-center">
+          <Sparkles className="h-[120px] w-[120px] text-[#D4A574] mb-6" strokeWidth={1} />
+          <p className="text-[16px] font-medium text-[#6B5D54]">No has seleccionado nada aún.</p>
+          <p className="mt-1 text-[13px] text-[#9B8E84]">Explora para personalizar tus podcasts.</p>
           <button
             type="button"
             onClick={onRestart}
-            className="mt-6 cursor-pointer rounded-full bg-[#7C3AED] px-6 py-3 font-semibold text-white transition-all duration-200 hover:bg-[#A855F7] hover:scale-105"
+            className="mt-6 cursor-pointer rounded-full bg-[#E07856] px-6 py-3 font-medium text-white transition-all duration-500 ease-out hover:bg-[#C96A4A] hover:scale-105"
           >
             Explorar
           </button>
@@ -500,20 +500,20 @@ function SummaryScreen({
           type="button"
           onClick={onSave}
           disabled={saving}
-          className="flex cursor-pointer items-center gap-2 rounded-full bg-[#7C3AED] px-6 py-2.5 font-semibold text-white transition-colors hover:bg-[#A855F7] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex cursor-pointer items-center gap-2 rounded-full bg-[#E07856] px-6 py-2.5 font-medium text-white transition-all duration-500 ease-out hover:bg-[#C96A4A] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" strokeWidth={1.5} />}
           {saving ? "Guardando..." : "Guardar"}
         </button>
         <button
           type="button"
           onClick={onRestart}
-          className="cursor-pointer rounded-full bg-[#F3F4F6] px-5 py-2.5 text-[13px] font-semibold text-[#111827] transition-colors hover:bg-[#E5E7EB]"
+          className="cursor-pointer rounded-full bg-[#F5EDE4] px-5 py-2.5 text-[13px] font-medium text-[#1A1614] transition-all duration-500 ease-out hover:bg-[#E8DFD3]"
         >
           Explorar más
         </button>
         {saved && (
-          <span className="text-[13px] text-[#7C3AED]">Guardado</span>
+          <span className="text-[13px] text-[#E07856]">Guardado</span>
         )}
       </div>
     </div>
@@ -653,8 +653,8 @@ export function UniversoTab() {
     + (selections.custom_interests?.length || 0);
 
   const getGradient = (item: UniverseItem) => {
-    if (round.id === "topics" && item.category) return TOPIC_GRADIENTS[item.category] || "from-gray-600 to-gray-800";
-    return round.gradient || "from-gray-600 to-gray-800";
+    if (round.id === "topics" && item.category) return TOPIC_GRADIENTS[item.category] || "from-[#9B8E84] to-[#6B5D54]";
+    return round.gradient || "from-[#9B8E84] to-[#6B5D54]";
   };
 
   const getSubtitle = (item: UniverseItem) => {
@@ -667,7 +667,7 @@ export function UniversoTab() {
   if (phase === "loading") {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#7C3AED]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#D4A574]" />
       </div>
     );
   }
@@ -692,10 +692,10 @@ export function UniversoTab() {
     <div className="flex min-h-[80vh] flex-col items-center justify-start px-4 pt-4 pb-24">
       {/* Title */}
       <div className="mb-2 text-center">
-        <h1 className="text-2xl font-bold text-[#111827] font-[family-name:var(--font-montserrat)]">
+        <h1 className="text-2xl font-normal text-[#1A1614] font-[family-name:var(--font-instrument-serif)]">
           Tu Universo
         </h1>
-        <p className="mt-1 text-[13px] text-[#9CA3AF]">
+        <p className="mt-1 text-[13px] text-[#9B8E84]">
           Desliza derecha si te gusta, izquierda si no
         </p>
       </div>
@@ -719,7 +719,7 @@ export function UniversoTab() {
         />
       ) : (
         <div className="flex h-[420px] w-[320px] items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-[#7C3AED]" />
+          <Loader2 className="h-6 w-6 animate-spin text-[#D4A574]" />
         </div>
       )}
 
@@ -727,7 +727,7 @@ export function UniversoTab() {
       <button
         type="button"
         onClick={skipRound}
-        className="mt-5 flex cursor-pointer items-center justify-center gap-1.5 text-[13px] text-[#9CA3AF] transition-colors hover:text-[#111827]"
+        className="mt-5 flex cursor-pointer items-center justify-center gap-1.5 text-[13px] text-[#9B8E84] transition-all duration-500 ease-out hover:text-[#1A1614]"
       >
         <SkipForward className="h-3.5 w-3.5" />
         Saltar ronda
