@@ -155,49 +155,49 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100vh-56px)] items-center justify-center bg-[#F9FAFB]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#9CA3AF]" />
+      <div className="flex min-h-[calc(100vh-56px)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#D4A574]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-full bg-[#F9FAFB] text-[#111827] pb-20 md:pb-0">
-      {/* ── Sub-tabs (For You / Discover style) — only on mobile, sidebar handles desktop ── */}
+    <div className="min-h-full text-[#1A1614] pb-20 md:pb-0">
+      {/* ── Sub-tabs (For You / History) — mobile only ── */}
       {(activeTab === "hoy" || activeTab === "historial") && (
-        <div className="sticky top-0 z-30 bg-[#F9FAFB]/95 shadow-sm md:hidden" role="tablist" aria-label="Sub-secciones">
+        <div className="sticky top-0 z-30 bg-white/30 backdrop-blur-xl md:hidden" role="tablist" aria-label="Sub-secciones">
           <div className="flex items-center gap-6 px-5 py-3">
             <button
               onClick={() => setActiveTab("hoy")}
-              className={`relative text-[16px] font-bold transition-colors ${
-                activeTab === "hoy" ? "text-[#111827]" : "text-[#9CA3AF] hover:text-[#6B7280]"
+              className={`relative text-[16px] font-medium transition-all duration-500 ease-out ${
+                activeTab === "hoy" ? "text-[#1A1614]" : "text-[#9B8E84] hover:text-[#6B5D54]"
               }`}
             >
               Para ti
               {activeTab === "hoy" && (
-                <span className="absolute -bottom-3 left-0 right-0 h-[2px] bg-[#7C3AED]" />
+                <span className="absolute -bottom-3 left-0 right-0 h-[2px] rounded-full bg-[#E07856]" />
               )}
             </button>
             <button
               onClick={() => setActiveTab("historial")}
-              className={`relative text-[16px] font-bold transition-colors ${
-                activeTab === "historial" ? "text-[#111827]" : "text-[#9CA3AF] hover:text-[#6B7280]"
+              className={`relative text-[16px] font-medium transition-all duration-500 ease-out ${
+                activeTab === "historial" ? "text-[#1A1614]" : "text-[#9B8E84] hover:text-[#6B5D54]"
               }`}
             >
               Historial
               {activeTab === "historial" && (
-                <span className="absolute -bottom-3 left-0 right-0 h-[2px] bg-[#7C3AED]" />
+                <span className="absolute -bottom-3 left-0 right-0 h-[2px] rounded-full bg-[#E07856]" />
               )}
             </button>
             <div className="flex-1" />
             <button
               onClick={() => {
-                /* refresh - could trigger data reload */
+                /* refresh */
               }}
-              className="text-[#9CA3AF] hover:text-[#111827] transition-colors"
+              className="text-[#9B8E84] hover:text-[#1A1614] transition-all duration-500 ease-out"
               aria-label="Actualizar"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
@@ -206,11 +206,11 @@ export default function DashboardPage() {
       )}
 
       {(activeTab === "perfil") && (
-        <div className="sticky top-0 z-30 bg-[#F9FAFB]/95 shadow-sm md:hidden" role="tablist">
+        <div className="sticky top-0 z-30 bg-white/30 backdrop-blur-xl md:hidden" role="tablist">
           <div className="flex items-center gap-6 px-5 py-3">
-            <button className="relative text-[16px] font-bold text-[#111827]">
+            <button className="relative text-[16px] font-medium text-[#1A1614]">
               Mi Perfil
-              <span className="absolute -bottom-3 left-0 right-0 h-[2px] bg-[#7C3AED]" />
+              <span className="absolute -bottom-3 left-0 right-0 h-[2px] rounded-full bg-[#E07856]" />
             </button>
           </div>
         </div>
@@ -261,13 +261,13 @@ export default function DashboardPage() {
             role="tab"
             aria-selected={activeTab === "hoy" || activeTab === "historial"}
             onClick={() => setActiveTab("hoy")}
-            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-300 ${
+            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-500 ease-out ${
               activeTab === "hoy" || activeTab === "historial"
-                ? "bg-[#7C3AED]/10 text-[#7C3AED]"
-                : "text-[#9CA3AF] hover:text-[#6B7280]"
+                ? "bg-[#E07856]/10 text-[#E07856]"
+                : "text-[#9B8E84] hover:text-[#6B5D54]"
             }`}
           >
-            <Home className="h-5 w-5" />
+            <Home className="h-5 w-5" strokeWidth={1.5} />
           </button>
 
           {/* Discover pill */}
@@ -275,13 +275,13 @@ export default function DashboardPage() {
             role="tab"
             aria-selected={activeTab === "descubrir" || activeTab === "universo"}
             onClick={() => setActiveTab("descubrir")}
-            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-300 ${
+            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-500 ease-out ${
               activeTab === "descubrir" || activeTab === "universo"
-                ? "bg-[#7C3AED]/10 text-[#7C3AED]"
-                : "text-[#9CA3AF] hover:text-[#6B7280]"
+                ? "bg-[#E07856]/10 text-[#E07856]"
+                : "text-[#9B8E84] hover:text-[#6B5D54]"
             }`}
           >
-            <Search className="h-5 w-5" />
+            <Search className="h-5 w-5" strokeWidth={1.5} />
           </button>
 
           {/* Profile pill */}
@@ -289,22 +289,22 @@ export default function DashboardPage() {
             role="tab"
             aria-selected={activeTab === "perfil"}
             onClick={() => setActiveTab("perfil")}
-            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-300 ${
+            className={`flex items-center justify-center rounded-full px-8 py-2.5 transition-all duration-500 ease-out ${
               activeTab === "perfil"
-                ? "bg-[#7C3AED]/10 text-[#7C3AED]"
-                : "text-[#9CA3AF] hover:text-[#6B7280]"
+                ? "bg-[#E07856]/10 text-[#E07856]"
+                : "text-[#9B8E84] hover:text-[#6B5D54]"
             }`}
           >
-            <User className="h-5 w-5" />
+            <User className="h-5 w-5" strokeWidth={1.5} />
           </button>
 
           {/* + circular button */}
           <button
             onClick={() => setActiveTab("universo")}
-            className="ml-1 flex h-11 w-11 items-center justify-center rounded-full bg-[#7C3AED] text-white transition-all duration-300 hover:bg-[#6D28D9]"
+            className="ml-1 flex h-11 w-11 items-center justify-center rounded-full bg-[#E07856] text-white transition-all duration-500 ease-out hover:bg-[#C96A4A]"
             aria-label="Crear"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-5 w-5" strokeWidth={1.5} />
           </button>
         </nav>
       </div>
