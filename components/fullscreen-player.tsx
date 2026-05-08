@@ -7,37 +7,16 @@ import {
   X,
   SkipBack,
   SkipForward,
+  Mic,
 } from "lucide-react";
 import { parseDialogueSegments, type DialogueSegment } from "@/lib/tts-utils";
 import { getTopicById } from "@/lib/topics";
 import { useVoiceInteraction } from "@/hooks/use-voice-interaction";
-import { VoiceMicButton } from "@/components/voice-mic-button";
 
-// ── Topic → gradient mapping (mirrors episode-thumbnail.tsx) ──────────────
+// ── Cover gradient (warm fallback when no image) ─────────────────────────
 
-const CATEGORY_GRADIENTS: Record<string, string> = {
-  tecnologia: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-  ciencia: "linear-gradient(135deg, #06b6d4 0%, #1d4ed8 100%)",
-  "negocios-finanzas": "linear-gradient(135deg, #059669 0%, #0f766e 100%)",
-  entretenimiento: "linear-gradient(135deg, #ec4899 0%, #7c3aed 100%)",
-  "salud-bienestar": "linear-gradient(135deg, #22c55e 0%, #059669 100%)",
-  "sociedad-cultura": "linear-gradient(135deg, #dc2626 0%, #ea580c 100%)",
-  "true-crime-misterio": "linear-gradient(135deg, #f97316 0%, #dc2626 100%)",
-  lifestyle: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-  custom: "linear-gradient(135deg, #4b5563 0%, #1f2937 100%)",
-  "weekly-digest": "linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)",
-};
-
-function getCoverGradient(topics: string[]): string {
-  if (topics.includes("weekly-digest")) return CATEGORY_GRADIENTS["weekly-digest"];
-  const first = topics[0];
-  if (first) {
-    const topic = getTopicById(first);
-    if (topic?.categoryId && CATEGORY_GRADIENTS[topic.categoryId]) {
-      return CATEGORY_GRADIENTS[topic.categoryId];
-    }
-  }
-  return CATEGORY_GRADIENTS.custom;
+function getCoverGradient(): string {
+  return "linear-gradient(135deg, #E07856 0%, #F5D5B8 60%, #D4A574 100%)";
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -81,21 +60,10 @@ export function FullscreenPlayer({
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
 
-  // Parse dialogue segments
+  // Parse dialogue segments (keep for voice interaction context)
   const segments: DialogueSegment[] = useMemo(() => {
     return parseDialogueSegments(script);
   }, [script]);
-
-  const hasDualVoice = segments.length >= 2 && new Set(segments.map(s => s.speaker)).size >= 2;
-
-  // Estimate active segment
-  const currentSegmentIndex = useMemo(() => {
-    if (!hasDualVoice || duration <= 0 || segments.length === 0) return -1;
-    const segDur = duration / segments.length;
-    return Math.min(Math.floor(currentTime / segDur), segments.length - 1);
-  }, [hasDualVoice, duration, currentTime, segments]);
-
-  const activeSpeaker = currentSegmentIndex >= 0 ? segments[currentSegmentIndex]?.speaker : null;
 
   // Audio setup
   useEffect(() => {
@@ -150,10 +118,9 @@ export function FullscreenPlayer({
   };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const coverGradient = getCoverGradient(topics);
 
-  // Waveform bar heights (randomized on mount, animated via CSS)
-  const barSeeds = useMemo(() => Array.from({ length: 20 }, () => Math.random()), []);
+  // Waveform: 32 bars, random seeds
+  const barSeeds = useMemo(() => Array.from({ length: 32 }, () => Math.random()), []);
 
   // Voice interaction
   const { state: voiceState, isSupported: voiceSupported, startListening, stopListening, dismissError } = useVoiceInteraction({
@@ -174,105 +141,103 @@ export function FullscreenPlayer({
     },
   });
 
+  // Topic labels joined by " · "
+  const topicLabels = topics.slice(0, 4).map((t) => {
+    const topic = getTopicById(t);
+    return topic?.nombre || t;
+  }).join(" \u00B7 ");
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in duration-300"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto huxe-bg"
+      style={{ animation: "huxe-player-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Close button */}
+      <style>{`
+        @keyframes huxe-player-in {
+          from { opacity: 0; transform: translateY(24px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes huxe-pulse-warm {
+          0%, 100% { transform: scale(1); background-color: rgba(224, 120, 86, 0.10); }
+          50% { transform: scale(1.05); background-color: rgba(224, 120, 86, 0.25); }
+        }
+      `}</style>
+
+      {/* Close button — top right, no background */}
       <button
         onClick={onClose}
-        className="absolute right-4 top-4 z-10 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/[0.10] text-white transition-all duration-200 hover:bg-white/[0.14]"
+        className="absolute right-5 top-5 z-10 cursor-pointer text-[#6B5D54] transition-all duration-500 ease-out hover:text-[#1A1614]"
       >
-        <X className="h-5 w-5" />
+        <X className="h-6 w-6" strokeWidth={1.5} />
       </button>
 
-      <div className="flex w-full max-w-sm flex-col items-center gap-6 px-6 lg:max-w-3xl lg:flex-row lg:gap-12">
-        {/* Cover */}
+      {/* Main content — single column, centered */}
+      <div className="flex w-full max-w-md flex-col items-center px-6 py-12">
+
+        {/* ── Cover ── */}
         <div
-          className="relative flex h-[280px] w-[280px] items-center justify-center overflow-hidden rounded-3xl lg:h-[360px] lg:w-[360px] shrink-0"
-          style={{ background: coverGradient }}
+          className="relative h-[320px] w-[320px] overflow-hidden rounded-3xl lg:h-[400px] lg:w-[400px] shrink-0"
+          style={{
+            background: coverImageUrl ? undefined : getCoverGradient(),
+            boxShadow: "0 12px 40px rgba(224, 120, 86, 0.08)",
+          }}
         >
-          {/* Cover image behind avatars */}
           {coverImageUrl && (
             <img
               src={coverImageUrl}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-60"
+              className="h-full w-full object-cover"
             />
           )}
-          {/* Dual avatars */}
-          <div className="flex items-center">
-            <div
-              className={`flex h-16 w-16 items-center justify-center rounded-full border-2 border-white text-xl font-extrabold transition-all duration-300 font-[family-name:var(--font-montserrat)] ${
-                isPlaying && activeSpeaker === "ALEX"
-                  ? "bg-[#7C3AED] text-white scale-110 ring-2 ring-[#7C3AED] ring-offset-2 ring-offset-transparent"
-                  : "bg-black/40 text-white"
-              }`}
-            >
-              A
-            </div>
-            <div
-              className={`-ml-5 flex h-16 w-16 items-center justify-center rounded-full border-2 border-white text-xl font-extrabold transition-all duration-300 font-[family-name:var(--font-montserrat)] ${
-                isPlaying && activeSpeaker === "SARA"
-                  ? "bg-[#7C3AED] text-white scale-110 ring-2 ring-[#7C3AED] ring-offset-2 ring-offset-transparent"
-                  : "bg-black/40 text-white"
-              }`}
-            >
-              S
-            </div>
-          </div>
         </div>
 
-        {/* Title + topics */}
-        <div className="w-full text-center">
-          <h2 className="text-2xl font-extrabold text-white font-[family-name:var(--font-montserrat)] line-clamp-2">
-            {episodeTitle}
-          </h2>
-          <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-            {topics.slice(0, 4).map((t) => {
-              const topic = getTopicById(t);
-              return (
-                <span key={t} className="rounded-full bg-white/[0.10] px-2.5 py-0.5 text-[11px] text-white/50">
-                  {topic?.nombre || t}
-                </span>
-              );
-            })}
-          </div>
-        </div>
+        {/* ── Title ── */}
+        <h2
+          className="mt-8 text-center text-[32px] leading-[1.05] text-[#1A1614] line-clamp-2 lg:text-[40px]"
+          style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+        >
+          {episodeTitle}
+        </h2>
 
-        {/* Waveform (with answering overlay) */}
-        <div className="relative">
-          <div className="flex h-8 items-end gap-[3px]">
-            {barSeeds.map((seed, i) => (
-              <span
-                key={i}
-                className="w-[3px] rounded-full transition-all duration-150"
-                style={{
-                  height: isPlaying
-                    ? `${Math.max(6, seed * 32)}px`
-                    : "4px",
-                  backgroundColor: isPlaying ? "#7C3AED" : "rgba(255,255,255,0.14)",
-                  opacity: isPlaying ? 0.5 + seed * 0.5 : 0.4,
-                }}
-              />
-            ))}
-          </div>
+        {/* ── Topics — plain text, no pills ── */}
+        {topicLabels && (
+          <p className="mt-3 text-center text-[13px] font-medium text-[#6B5D54]">
+            {topicLabels}
+          </p>
+        )}
+
+        {/* ── Waveform ── */}
+        <div className="relative mt-10 flex h-8 w-[80%] items-end justify-center gap-[3px]">
+          {barSeeds.map((seed, i) => (
+            <span
+              key={i}
+              className="w-[3px] rounded-full"
+              style={{
+                height: isPlaying
+                  ? `${Math.max(4, seed * 28)}px`
+                  : "4px",
+                backgroundColor: isPlaying ? "#E07856" : "#E8DFD3",
+                opacity: isPlaying ? 0.5 + seed * 0.5 : 1,
+                transition: "height 80ms ease-out, background-color 300ms, opacity 300ms",
+              }}
+            />
+          ))}
 
           {/* Voice answering overlay */}
           {(voiceState.isProcessing || voiceState.isAnswering) && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-2xl" style={{ background: "rgba(0,0,0,0.85)" }}>
+            <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/60 backdrop-blur-sm">
               <div className="space-y-2 text-center">
                 <div className="flex items-center justify-center gap-2">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-green-400" style={{ animationDelay: "0ms" }} />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-green-400" style={{ animationDelay: "150ms" }} />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-green-400" style={{ animationDelay: "300ms" }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#E07856]" style={{ animationDelay: "0ms" }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#E07856]" style={{ animationDelay: "150ms" }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#E07856]" style={{ animationDelay: "300ms" }} />
                 </div>
-                <p className="text-xs font-bold text-[#7C3AED] font-[family-name:var(--font-montserrat)]">
-                  {voiceState.isProcessing ? "Alex & Sara piensan..." : "Alex & Sara responden"}
+                <p className="text-xs font-medium text-[#E07856]">
+                  {voiceState.isProcessing ? "Pensando..." : "Respondiendo"}
                 </p>
                 {voiceState.transcript && (
-                  <p className="max-w-[200px] text-center text-[11px] italic text-white/30">
+                  <p className="max-w-[200px] text-center text-[11px] italic text-[#6B5D54]">
                     &ldquo;{voiceState.transcript}&rdquo;
                   </p>
                 )}
@@ -281,124 +246,91 @@ export function FullscreenPlayer({
           )}
         </div>
 
-        {/* Speaker indicators */}
-        {hasDualVoice && (
-          <div className="flex w-full items-center justify-between px-4">
-            <div className="flex items-center gap-2">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold transition-all duration-300 ${
-                  isPlaying && activeSpeaker === "ALEX"
-                    ? "bg-[#7C3AED] text-white scale-110"
-                    : "bg-white/[0.10] text-white/30"
-                }`}
-              >
-                A
-              </div>
-              <span className={`text-[12px] font-[family-name:var(--font-montserrat)] ${activeSpeaker === "ALEX" ? "text-[#7C3AED]" : "text-white/30"}`}>
-                Alex
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-[12px] font-[family-name:var(--font-montserrat)] ${activeSpeaker === "SARA" ? "text-[#7C3AED]" : "text-white/30"}`}>
-                Sara
-              </span>
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold transition-all duration-300 ${
-                  isPlaying && activeSpeaker === "SARA"
-                    ? "bg-[#7C3AED] text-white scale-110"
-                    : "bg-white/[0.10] text-white/30"
-                }`}
-              >
-                S
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Segment text */}
-        {hasDualVoice && currentSegmentIndex >= 0 && isPlaying && (
-          <p className="max-w-sm text-center text-sm leading-relaxed text-white/50 line-clamp-2">
-            {segments[currentSegmentIndex]?.text.slice(0, 150)}
-            {(segments[currentSegmentIndex]?.text.length ?? 0) > 150 ? "..." : ""}
-          </p>
-        )}
-
-        {/* Controls */}
-        <div className="flex items-center gap-6">
+        {/* ── Controls ── */}
+        <div className="mt-10 flex items-center gap-8">
           <button
             onClick={() => seekRelative(-15)}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white/50 transition-all duration-200 hover:text-white"
+            className="cursor-pointer text-[#6B5D54] transition-all duration-500 ease-out hover:text-[#1A1614]"
           >
-            <SkipBack className="h-5 w-5" />
+            <SkipBack className="h-7 w-7" strokeWidth={1.5} />
           </button>
 
           <button
             onClick={togglePlay}
-            className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-[#7C3AED] text-white transition-all duration-200 hover:scale-105 hover:bg-[#A855F7]"
+            className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-[#E07856] text-white transition-all duration-500 ease-out hover:scale-105"
           >
             {isPlaying ? (
-              <Pause className="h-7 w-7" />
+              <Pause className="h-7 w-7" strokeWidth={1.5} />
             ) : (
-              <Play className="ml-1 h-7 w-7" />
+              <Play className="ml-1 h-7 w-7" strokeWidth={1.5} />
             )}
           </button>
 
           <button
             onClick={() => seekRelative(15)}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white/50 transition-all duration-200 hover:text-white"
+            className="cursor-pointer text-[#6B5D54] transition-all duration-500 ease-out hover:text-[#1A1614]"
           >
-            <SkipForward className="h-5 w-5" />
+            <SkipForward className="h-7 w-7" strokeWidth={1.5} />
           </button>
         </div>
 
-        {/* Voice mic button */}
+        {/* ── Voice mic button ── */}
         {voiceSupported && (episodeId || deepcastId) && (
-          <VoiceMicButton
-            isListening={voiceState.isListening}
-            isProcessing={voiceState.isProcessing}
-            isAnswering={voiceState.isAnswering}
-            transcript={voiceState.transcript}
-            onPress={startListening}
-            onRelease={stopListening}
+          <button
+            onPointerDown={startListening}
+            onPointerUp={stopListening}
+            onPointerLeave={stopListening}
             disabled={!episodeId && !deepcastId}
-          />
+            className="mt-6 flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border border-[#E07856]/20 transition-all duration-500 ease-out disabled:opacity-30"
+            style={{
+              animation: voiceState.isListening
+                ? "huxe-pulse-warm 1.5s ease-in-out infinite"
+                : undefined,
+              backgroundColor: voiceState.isListening
+                ? "rgba(224, 120, 86, 0.25)"
+                : "rgba(224, 120, 86, 0.10)",
+            }}
+          >
+            <Mic className="h-6 w-6 text-[#E07856]" strokeWidth={1.5} />
+          </button>
         )}
 
         {/* Voice error */}
         {voiceState.error && (
           <button
             onClick={dismissError}
-            className="cursor-pointer rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] text-red-400 transition-colors hover:bg-red-500/20"
+            className="mt-3 cursor-pointer rounded-full bg-[#E07856]/10 px-4 py-1.5 text-[11px] text-[#E07856] transition-all duration-500 ease-out hover:bg-[#E07856]/20"
           >
-            {voiceState.error} ✕
+            {voiceState.error}
           </button>
         )}
 
-        {/* Speed */}
+        {/* ── Speed — plain text ── */}
         <button
           onClick={cycleSpeed}
-          className="cursor-pointer rounded-full bg-white/[0.10] px-4 py-1.5 text-[12px] font-semibold text-white/50 transition-all duration-200 hover:bg-white/[0.14] hover:text-white font-[family-name:var(--font-montserrat)]"
+          className="mt-6 cursor-pointer text-[13px] text-[#6B5D54] transition-all duration-500 ease-out hover:text-[#1A1614]"
+          style={{ fontVariantNumeric: "tabular-nums" }}
         >
           {speed}x
         </button>
 
-        {/* Progress bar */}
-        <div className="w-full space-y-1.5">
+        {/* ── Progress bar ── */}
+        <div className="mt-8 w-full space-y-2">
           <div
             ref={progressRef}
-            className="group relative h-1 w-full cursor-pointer rounded-full bg-white/[0.14] transition-all duration-200 hover:h-2"
+            className="group relative h-[2px] w-full cursor-pointer rounded-full bg-[#E8DFD3] transition-all duration-200 hover:h-1"
             onClick={handleProgressClick}
           >
             <div
-              className="absolute inset-y-0 left-0 rounded-full bg-[#7C3AED]"
+              className="absolute inset-y-0 left-0 rounded-full bg-[#E07856]"
               style={{ width: `${progress}%` }}
             />
             <div
-              className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover:opacity-100"
+              className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-[#E07856] opacity-0 shadow-sm transition-opacity duration-200 group-hover:opacity-100"
               style={{ left: `calc(${progress}% - 6px)` }}
             />
           </div>
-          <div className="flex justify-between text-[11px] text-white/30">
+          <div className="flex justify-between text-[13px] text-[#6B5D54]" style={{ fontVariantNumeric: "tabular-nums" }}>
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>

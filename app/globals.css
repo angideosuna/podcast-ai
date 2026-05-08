@@ -6,23 +6,41 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --font-heading: var(--font-montserrat);
+  --font-heading: var(--font-instrument-serif);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-playfair-display);
+  --font-display: var(--font-instrument-serif);
 
-  /* ── Paleta WaveCast × Design Expert (Colorida) ── */
-  --color-forest: #7C3AED;
-  --color-forest-light: #A855F7;
-  --color-mint: #A855F7;
-  --color-cream: #F9FAFB;
-  --color-cream-light: #F3F4F6;
-  --color-cream-dark: #E5E7EB;
-  --color-dark: #111827;
-  --color-muted: #6B7280;
-  --color-muted-light: #9CA3AF;
-  --color-section-label: #4B5563;
-  --color-accent-orange: #F97316;
-  --color-accent-cyan: #06B6D4;
+  /* ── Paleta Huxe — cálida, orgánica ── */
+  --color-huxe-text: #1A1614;
+  --color-huxe-text-secondary: #6B5D54;
+  --color-huxe-accent: #E07856;
+  --color-huxe-accent-hover: #C96A4A;
+  --color-huxe-malva: #9B7B8E;
+  --color-huxe-subtle: #D4A574;
+  --color-huxe-border: rgba(232, 223, 211, 0.4);
+  --color-huxe-card: rgba(255, 252, 247, 0.5);
+  --color-huxe-cream: #FAF0E4;
+  --color-huxe-cream-light: #FFF8F0;
+  --color-huxe-cream-dark: #E8DFD3;
+
+  /* Legacy aliases for components not yet migrated */
+  --color-forest: #E07856;
+  --color-forest-light: #D4A574;
+  --color-mint: #9B7B8E;
+  --color-cream: #FAF0E4;
+  --color-cream-light: #FFF8F0;
+  --color-cream-dark: #E8DFD3;
+  --color-dark: #1A1614;
+  --color-muted: #6B5D54;
+  --color-muted-light: #9B8E84;
+  --color-section-label: #6B5D54;
+  --color-accent-orange: #E07856;
+  --color-accent-cyan: #9B7B8E;
+
+  /* ── Sombras cálidas ── */
+  --shadow-soft: 0 4px 24px rgba(26, 22, 20, 0.04);
+  --shadow-warm: 0 12px 40px rgba(224, 120, 86, 0.08);
+  --shadow-elevated: 0 24px 60px rgba(26, 22, 20, 0.06);
 
   /* ── shadcn overrides ── */
   --color-sidebar-ring: var(--sidebar-ring);
@@ -71,36 +89,64 @@ body {
   --radius: 0.75rem;
   --sidebar-width-collapsed: 72px;
   --sidebar-width-expanded: 240px;
-  --background: #F9FAFB;
-  --foreground: #111827;
-  --card: #FFFFFF;
-  --card-foreground: #111827;
-  --popover: #FFFFFF;
-  --popover-foreground: #111827;
-  --primary: #7C3AED;
+  --background: #FAF0E4;
+  --foreground: #1A1614;
+  --card: rgba(255, 252, 247, 0.5);
+  --card-foreground: #1A1614;
+  --popover: #FFFCF7;
+  --popover-foreground: #1A1614;
+  --primary: #E07856;
   --primary-foreground: #FFFFFF;
-  --secondary: #F3F4F6;
-  --secondary-foreground: #111827;
-  --muted-foreground: #6B7280;
-  --accent: #F3F4F6;
-  --accent-foreground: #111827;
+  --secondary: #F5EDE4;
+  --secondary-foreground: #1A1614;
+  --muted-foreground: #6B5D54;
+  --accent: #F5EDE4;
+  --accent-foreground: #1A1614;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #7C3AED;
-  --chart-1: #7C3AED;
-  --chart-2: #A855F7;
-  --chart-3: #6D28D9;
-  --chart-4: #F97316;
-  --chart-5: #06B6D4;
-  --sidebar: #F9FAFB;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #7C3AED;
+  --border: rgba(232, 223, 211, 0.4);
+  --input: rgba(232, 223, 211, 0.4);
+  --ring: #E07856;
+  --chart-1: #E07856;
+  --chart-2: #D4A574;
+  --chart-3: #9B7B8E;
+  --chart-4: #C96A4A;
+  --chart-5: #6B5D54;
+  --sidebar: #FAF0E4;
+  --sidebar-foreground: #1A1614;
+  --sidebar-primary: #E07856;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F3F4F6;
-  --sidebar-accent-foreground: #111827;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #7C3AED;
+  --sidebar-accent: #F5EDE4;
+  --sidebar-accent-foreground: #1A1614;
+  --sidebar-border: rgba(232, 223, 211, 0.4);
+  --sidebar-ring: #E07856;
+}
+
+/* ═══════════════════════════════════════════════════
+   HUXE BACKGROUND — watercolor gradient + noise
+   ═══════════════════════════════════════════════════ */
+
+.huxe-bg {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, #F5D5B8 0%, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 80% 30%, #E8B89C 0%, transparent 55%),
+    radial-gradient(ellipse 90% 70% at 50% 80%, #D4A088 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 10% 90%, #C9A0A8 0%, transparent 50%),
+    linear-gradient(180deg, #FAF0E4 0%, #F5DCC4 100%);
+  background-attachment: fixed;
+}
+
+/* Noise/grain overlay — applied via pseudo-element on body */
+.huxe-bg::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
 }
 
 @layer base {
@@ -108,10 +154,10 @@ body {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-cream text-dark;
+    @apply text-[#1A1614];
   }
   h1, h2 {
-    @apply tracking-tight font-[family-name:var(--font-heading),var(--font-sans)] font-extrabold;
+    @apply tracking-tight font-[family-name:var(--font-heading),var(--font-sans)] font-normal;
   }
   h3, h4, h5, h6 {
     @apply tracking-tight;
@@ -121,34 +167,36 @@ body {
   }
 }
 
-/* ── Huxe light components ── */
+/* ── Huxe components ── */
 @layer components {
   .glass-card {
-    @apply bg-white border border-[#E5E7EB] rounded-3xl shadow-sm;
+    @apply bg-white/40 backdrop-blur-xl rounded-3xl;
+    box-shadow: var(--shadow-soft);
   }
   .glass-card-warm {
-    @apply bg-white border border-[#E5E7EB] rounded-3xl shadow-sm;
+    @apply bg-white/40 backdrop-blur-xl rounded-3xl;
+    box-shadow: var(--shadow-warm);
   }
   .glass-input {
-    @apply bg-white border border-[#E5E7EB] rounded-full px-5 py-3 text-[#111827] placeholder-[#9CA3AF] transition-all duration-200 focus:border-[#7C3AED] focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20;
+    @apply bg-white/40 backdrop-blur-xl border-0 rounded-full px-5 py-3 text-[#1A1614] placeholder-[#9B8E84] transition-all duration-200 focus:bg-white/60 focus:outline-none focus:ring-2 focus:ring-[#E07856]/20;
   }
   .btn-huxe {
-    @apply rounded-full bg-[#7C3AED] px-6 py-3.5 text-[15px] font-semibold text-white transition-all duration-200 hover:bg-[#6D28D9] active:scale-[0.98] cursor-pointer;
+    @apply rounded-full bg-[#E07856] px-6 py-3.5 text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#C96A4A] active:scale-[0.98] cursor-pointer;
   }
   .btn-huxe-outline {
-    @apply rounded-full border border-[#7C3AED] bg-transparent px-6 py-3.5 text-[15px] font-semibold text-[#7C3AED] transition-all duration-200 hover:bg-[#7C3AED]/5 active:scale-[0.98] cursor-pointer;
+    @apply rounded-full border border-[#E07856] bg-transparent px-6 py-3.5 text-[15px] font-medium text-[#E07856] transition-all duration-200 hover:bg-[#E07856]/5 active:scale-[0.98] cursor-pointer;
   }
   .btn-huxe-ghost {
-    @apply rounded-full bg-[#F3F4F6] px-5 py-2.5 text-[13px] font-semibold text-[#111827] transition-all duration-200 hover:bg-[#E5E7EB] cursor-pointer;
+    @apply rounded-full bg-[#F5EDE4] px-5 py-2.5 text-[13px] font-medium text-[#1A1614] transition-all duration-200 hover:bg-[#E8DFD3] cursor-pointer;
   }
   .btn-icon-circle {
-    @apply flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F4F6] text-[#6B7280] transition-all duration-200 hover:bg-[#E5E7EB] hover:text-[#111827] cursor-pointer;
+    @apply flex h-10 w-10 items-center justify-center rounded-full bg-white/40 backdrop-blur-xl text-[#6B5D54] transition-all duration-200 hover:bg-white/60 hover:text-[#1A1614] cursor-pointer;
   }
   .chip-huxe {
-    @apply rounded-full border border-dashed border-[#D1D5DB] px-4 py-2 text-[14px] font-medium text-[#6B7280] transition-all duration-200 cursor-pointer;
+    @apply rounded-full border border-dashed border-[#E8DFD3]/60 px-4 py-2 text-[14px] font-medium text-[#6B5D54] transition-all duration-200 cursor-pointer;
   }
   .chip-huxe-active {
-    @apply rounded-full border border-solid border-[#7C3AED] bg-[#7C3AED]/10 px-4 py-2 text-[14px] font-semibold text-[#7C3AED] transition-all duration-200 cursor-pointer;
+    @apply rounded-full border border-solid border-[#E07856] bg-[#E07856]/10 px-4 py-2 text-[14px] font-medium text-[#E07856] transition-all duration-200 cursor-pointer;
   }
   .interactive {
     @apply transition-all duration-200 cursor-pointer;
@@ -158,7 +206,7 @@ body {
   }
 }
 
-/* ── Huxe light hero background ── */
+/* ── Huxe hero background ── */
 .huxe-hero-bg {
   position: relative;
   overflow: hidden;
@@ -169,11 +217,11 @@ body {
   inset: 0;
   background:
     linear-gradient(135deg,
-      #F5F3FF 0%,
-      #EDE9FE 20%,
+      #FAF0E4 0%,
+      #F5D5B8 20%,
       #FFF7ED 45%,
-      #ECFEFF 70%,
-      #F9FAFB 100%
+      #F0E0D0 70%,
+      #FAF0E4 100%
     );
 }
 .huxe-hero-bg::after {
@@ -181,9 +229,9 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(124, 58, 237, 0.10) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 30%, rgba(249, 115, 22, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 50%, rgba(224, 120, 86, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 30%, rgba(212, 165, 116, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(155, 123, 142, 0.06) 0%, transparent 50%);
   animation: huxe-shimmer 8s linear infinite;
 }
 
@@ -194,18 +242,18 @@ body {
 
 /* ── Bottom nav capsule ── */
 .bottom-nav-capsule {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 252, 247, 0.88);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid #E5E7EB;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(232, 223, 211, 0.4);
+  box-shadow: 0 4px 24px rgba(26, 22, 20, 0.06);
 }
 
 /* ── Warm gradient card overlay (for show cards) ── */
 .warm-gradient-card {
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 252, 247, 0.5);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 2px 8px rgba(26, 22, 20, 0.04);
 }
 
 /* ── Scrollbar styles ── */
@@ -225,11 +273,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(26, 22, 20, 0.10);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.20);
+  background: rgba(26, 22, 20, 0.18);
 }
 
 /* ── Global behavior ── */
@@ -238,12 +286,12 @@ html {
 }
 
 ::selection {
-  background: rgba(124, 58, 237, 0.2);
-  color: #111827;
+  background: rgba(224, 120, 86, 0.2);
+  color: #1A1614;
 }
 
 *:focus-visible {
-  outline: 2px solid rgba(124, 58, 237, 0.40);
+  outline: 2px solid rgba(224, 120, 86, 0.40);
   outline-offset: 2px;
 }
 
@@ -312,21 +360,21 @@ html {
 
 /* ── Select option styling ── */
 select option {
-  background-color: #FFFFFF;
-  color: #111827;
+  background-color: #FFFCF7;
+  color: #1A1614;
 }
 
 /* ── Prose overrides for script rendering ── */
 .prose h1, .prose h2, .prose h3 {
-  color: #111827;
+  color: #1A1614;
 }
 .prose p, .prose li {
-  color: #4B5563;
+  color: #6B5D54;
 }
 .prose strong {
-  color: #111827;
+  color: #1A1614;
 }
 .prose a {
-  color: #7C3AED;
+  color: #E07856;
   text-decoration: underline;
 }
