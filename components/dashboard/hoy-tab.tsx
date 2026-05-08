@@ -404,7 +404,7 @@ export function HoyTab({
               {[8, 16, 24, 16, 8].map((baseH, i) => (
                 <span
                   key={i}
-                  className="w-1.5 rounded-full bg-[#7C3AED]/40"
+                  className="w-1.5 rounded-full bg-[#E07856]/40"
                   style={{
                     height: `${baseH}px`,
                     animation: `barPulse 1.2s ease-in-out ${i * 0.15}s infinite alternate`,
@@ -414,7 +414,7 @@ export function HoyTab({
             </div>
 
             {/* Phase text */}
-            <p className="text-sm text-[#6B7280]">
+            <p className="text-sm text-[#6B5D54]">
               {PHASE_TEXTS[genSubPhase]}
             </p>
 
@@ -425,13 +425,13 @@ export function HoyTab({
                   <div
                     className={`h-2 w-2 rounded-full transition-all duration-500 ${
                       i < genSubPhase
-                        ? "bg-[#111827]"
+                        ? "bg-[#1A1614]"
                         : i === genSubPhase
-                          ? "bg-[#111827] animate-pulse"
-                          : "bg-[#D1D5DB]"
+                          ? "bg-[#E07856] animate-pulse"
+                          : "bg-[#E8DFD3]"
                     }`}
                   />
-                  {i < 2 && <div className={`h-px w-8 transition-colors duration-500 ${i < genSubPhase ? "bg-[#6B7280]" : "bg-[#E5E7EB]"}`} />}
+                  {i < 2 && <div className={`h-px w-8 transition-colors duration-500 ${i < genSubPhase ? "bg-[#6B5D54]" : "bg-[#E8DFD3]"}`} />}
                 </div>
               ))}
             </div>
@@ -449,12 +449,12 @@ export function HoyTab({
     return (
       <div className="mx-auto max-w-6xl px-5 py-6 lg:px-8">
         <div className="flex flex-col items-center gap-5 glass-card p-8 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
-            <AlertCircle className="h-7 w-7 text-red-400" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#E07856]/10">
+            <AlertCircle className="h-7 w-7 text-[#E07856]" strokeWidth={1.5} />
           </div>
           <div>
-            <h2 className="text-lg font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">Ha ocurrido un error</h2>
-            <p className="mt-2 text-sm text-red-400">{error}</p>
+            <h2 className="text-lg text-[#1A1614]" style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}>Ha ocurrido un error</h2>
+            <p className="mt-2 text-sm text-[#E07856]">{error}</p>
           </div>
           <div className="flex gap-3">
             <button
@@ -492,24 +492,16 @@ export function HoyTab({
         >
           <div className="relative flex h-[220px] items-center justify-center">
             <EpisodeThumbnail topics={topicsList} size="lg" coverImageUrl={coverImageUrl ?? undefined} />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-all duration-200 group-hover:bg-black/30">
-              <div className="flex items-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-black/40 text-base font-extrabold text-white font-[family-name:var(--font-montserrat)]">
-                  A
-                </div>
-                <div className="-ml-4 flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-black/40 text-base font-extrabold text-white font-[family-name:var(--font-montserrat)]">
-                  S
-                </div>
-              </div>
-              <div className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur-md opacity-0 transition-all duration-200 group-hover:opacity-100">
-                <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
+            <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-black/10 transition-all duration-500 ease-out group-hover:bg-black/20">
+              <div className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md opacity-0 transition-all duration-500 ease-out group-hover:opacity-100">
+                <Play className="ml-0.5 h-5 w-5 fill-white text-white" strokeWidth={1.5} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Title */}
-        <h1 className="mt-5 text-xl font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">
+        <h1 className="mt-5 text-xl text-[#1A1614]" style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}>
           {episodeTitle}
         </h1>
 
@@ -519,14 +511,14 @@ export function HoyTab({
             {topicsList.slice(0, 5).map((t) => {
               const topic = getTopicById(t);
               return (
-                <span key={t} className="rounded-full bg-[#F3F4F6] px-3 py-1 text-[11px] font-medium text-[#6B7280]">
+                <span key={t} className="rounded-full bg-[#F5EDE4] px-3 py-1 text-[11px] font-medium text-[#6B5D54]">
                   {topic?.nombre || t}
                 </span>
               );
             })}
             {preferences && (
-              <span className="rounded-full bg-[#F3F4F6] px-3 py-1 text-[11px] font-medium text-[#6B7280]">
-                <Clock className="mr-1 inline h-3 w-3" />{preferences.duration} min
+              <span className="rounded-full bg-[#F5EDE4] px-3 py-1 text-[11px] font-medium text-[#6B5D54]">
+                <Clock className="mr-1 inline h-3 w-3" strokeWidth={1.5} />{preferences.duration} min
               </span>
             )}
           </div>
@@ -535,9 +527,9 @@ export function HoyTab({
         {/* Transcript toggle */}
         <button
           onClick={() => setShowTranscript(!showTranscript)}
-          className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 glass-card px-4 py-3 text-[13px] font-semibold text-[#6B7280] transition-all duration-200 hover:bg-[#F3F4F6] hover:text-[#111827]"
+          className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 glass-card px-4 py-3 text-[13px] font-medium text-[#6B5D54] transition-all duration-500 ease-out hover:bg-white/60 hover:text-[#1A1614]"
         >
-          <FileText className="h-4 w-4" />
+          <FileText className="h-4 w-4" strokeWidth={1.5} />
           {showTranscript ? "Ocultar transcripción" : "Ver transcripción"}
         </button>
         {showTranscript && (
@@ -558,7 +550,7 @@ export function HoyTab({
             disabled={isGenerating}
             className="btn-huxe-ghost flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} />
             Regenerar
           </button>
           <AdjustEpisode
@@ -576,16 +568,16 @@ export function HoyTab({
                 disabled={shareLoading}
                 className="btn-huxe-ghost flex items-center gap-1.5 disabled:opacity-50"
               >
-                {copied ? <><Check className="h-3.5 w-3.5 text-[#7C3AED]" /> Copiado</> : <><Share2 className="h-3.5 w-3.5" /> Compartir</>}
+                {copied ? <><Check className="h-3.5 w-3.5 text-[#E07856]" strokeWidth={1.5} /> Copiado</> : <><Share2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Compartir</>}
               </button>
               <button
                 onClick={handleTogglePublic}
                 disabled={publicLoading}
                 className={`btn-huxe-ghost flex items-center gap-1.5 disabled:opacity-50 ${
-                  isPublic ? "!bg-[#7C3AED]/15 !text-[#7C3AED]" : ""
+                  isPublic ? "!bg-[#E07856]/10 !text-[#E07856]" : ""
                 }`}
               >
-                {isPublic ? <Globe className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                {isPublic ? <Globe className="h-3.5 w-3.5" strokeWidth={1.5} /> : <Lock className="h-3.5 w-3.5" strokeWidth={1.5} />}
                 {isPublic ? "Público" : "Hacer público"}
               </button>
             </>
@@ -602,7 +594,7 @@ export function HoyTab({
         {/* Sources */}
         {generatedArticles.length > 0 && (
           <div className="mt-6 glass-card p-5">
-            <p className="mb-3 text-[13px] font-semibold text-[#6B7280]">
+            <p className="mb-3 text-[13px] font-medium text-[#6B5D54]">
               Basado en {generatedArticles.length} noticias
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -612,7 +604,7 @@ export function HoyTab({
                   href={article.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full bg-[#F3F4F6] px-3 py-1 text-[11px] text-[#6B7280] transition-all duration-200 hover:bg-[#E5E7EB] hover:text-[#111827]"
+                  className="rounded-full bg-[#F5EDE4] px-3 py-1 text-[11px] text-[#6B5D54] transition-all duration-500 ease-out hover:bg-[#E8DFD3] hover:text-[#1A1614]"
                 >
                   {article.source}
                 </a>
@@ -626,25 +618,25 @@ export function HoyTab({
           <div className="mt-6 overflow-hidden glass-card p-5">
             {schedulePromptState === "confirmed" ? (
               <div className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-[#7C3AED]" />
-                <p className="text-[14px] font-medium text-[#111827]">Listo. Mañana a las 8:00 tendrás tu podcast esperándote</p>
+                <Check className="h-5 w-5 shrink-0 text-[#E07856]" strokeWidth={1.5} />
+                <p className="text-[14px] font-medium text-[#1A1614]">Listo. Mañana a las 8:00 tendrás tu podcast esperándote</p>
               </div>
             ) : (
               <>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F3F4F6]">
-                    <Clock className="h-5 w-5 text-[#6B7280]" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F5EDE4]">
+                    <Clock className="h-5 w-5 text-[#6B5D54]" strokeWidth={1.5} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[14px] font-medium text-[#111827]">¿Te ha gustado? Recíbelo cada mañana</p>
-                    <p className="mt-0.5 text-[13px] text-[#9CA3AF]">Programa tu podcast diario y empieza cada día informado</p>
+                    <p className="text-[14px] font-medium text-[#1A1614]">¿Te ha gustado? Recíbelo cada mañana</p>
+                    <p className="mt-0.5 text-[13px] text-[#9B8E84]">Programa tu podcast diario y empieza cada día informado</p>
                   </div>
                   <button
                     onClick={handleDismissSchedulePrompt}
                     className="btn-icon-circle h-8 w-8 shrink-0"
                     aria-label="Cerrar"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-4 w-4" strokeWidth={1.5} />
                   </button>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -658,7 +650,7 @@ export function HoyTab({
                   </button>
                   <button
                     onClick={onSwitchToPerfil}
-                    className="cursor-pointer text-[13px] font-medium text-[#6B7280] transition-colors hover:text-[#111827]"
+                    className="cursor-pointer text-[13px] font-medium text-[#6B5D54] transition-all duration-500 ease-out hover:text-[#1A1614]"
                   >
                     Personalizar horario
                   </button>
@@ -670,15 +662,15 @@ export function HoyTab({
 
         {/* Audio player */}
         {audioGenerating && (
-          <div className="fixed bottom-24 left-0 right-0 z-50 flex items-center justify-center gap-3 border-t border-[#E5E7EB] bg-white/95 shadow-md border border-[#E5E7EB] px-4 py-3">
-            <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
-            <span className="text-[13px] text-[#6B7280]">Generando audio con voces reales...</span>
+          <div className="fixed bottom-24 left-0 right-0 z-50 flex items-center justify-center gap-3 bg-white/40 backdrop-blur-xl px-4 py-3 md:left-[72px] lg:left-[240px]">
+            <Loader2 className="h-5 w-5 animate-spin text-[#6B5D54]" />
+            <span className="text-[13px] text-[#6B5D54]">Generando audio con voces reales...</span>
           </div>
         )}
         {audioUrl ? (
-          <div className="fixed bottom-24 left-0 right-0 z-50 border-t border-[#E5E7EB] bg-white/95 shadow-md border border-[#E5E7EB] px-4 py-3">
-            <div className="mx-auto flex max-w-3xl items-center gap-3">
-              <span className="shrink-0 text-[13px] font-semibold text-[#111827]">{episodeTitle}</span>
+          <div className="fixed bottom-24 left-0 right-0 z-50 bg-white/40 backdrop-blur-xl px-4 py-3 md:left-[72px] lg:left-[240px]">
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-[13px] font-medium text-[#1A1614]">{episodeTitle}</span>
               <audio src={audioUrl} controls className="h-10 flex-1" style={{ filter: "invert(1) hue-rotate(145deg)" }} />
             </div>
           </div>
@@ -714,40 +706,43 @@ export function HoyTab({
       {/* PWA Install */}
       {showInstallBanner && (
         <div className="flex items-center gap-3 glass-card p-4">
-          <Download className="h-5 w-5 shrink-0 text-[#6B7280]" />
+          <Download className="h-5 w-5 shrink-0 text-[#6B5D54]" strokeWidth={1.5} />
           <div className="flex-1">
-            <p className="text-[14px] font-medium text-[#111827]">Instala WaveCast</p>
-            <p className="text-[12px] text-[#9CA3AF]">Acceso rápido y experiencia nativa</p>
+            <p className="text-[14px] font-medium text-[#1A1614]">Instala WaveCast</p>
+            <p className="text-[12px] text-[#9B8E84]">Acceso rápido y experiencia nativa</p>
           </div>
           <button onClick={onInstall} className="btn-huxe px-4 py-1.5 text-[13px]">Instalar</button>
-          <button onClick={onDismissInstall} className="btn-icon-circle h-8 w-8"><X className="h-4 w-4" /></button>
+          <button onClick={onDismissInstall} className="btn-icon-circle h-8 w-8"><X className="h-4 w-4" strokeWidth={1.5} /></button>
         </div>
       )}
 
       {/* Profile incomplete banner */}
       {!surveyCompleted && (
         <div className="flex items-center gap-3 glass-card p-4">
-          <Sparkles className="h-5 w-5 shrink-0 text-[#6B7280]" />
-          <p className="flex-1 text-[14px] font-medium text-[#111827]">Completa tu perfil para podcasts más personalizados</p>
+          <Sparkles className="h-5 w-5 shrink-0 text-[#D4A574]" strokeWidth={1.5} />
+          <p className="flex-1 text-[14px] font-medium text-[#1A1614]">Completa tu perfil para podcasts más personalizados</p>
           <button onClick={onSwitchToPerfil} className="btn-huxe px-4 py-1.5 text-[13px]">Completar</button>
         </div>
       )}
 
-      {/* ═══ Hero — Colorful gradient background with greeting ═══ */}
+      {/* ═══ Hero — Warm gradient background with greeting ═══ */}
       <div className="relative -mx-5 lg:-mx-8 -mt-4 mb-2 overflow-hidden rounded-b-[2rem] px-6 pb-12 pt-10"
-        style={{ background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 30%, #F97316 60%, #06B6D4 100%)" }}
+        style={{ background: "linear-gradient(135deg, #E07856 0%, #D4A574 30%, #F5D5B8 60%, #9B7B8E 100%)" }}
       >
         <div className="relative z-10 lg:flex lg:items-center lg:justify-between lg:gap-8">
           <div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-white font-[family-name:var(--font-display)] leading-tight">
+            <h1
+              className="text-4xl sm:text-5xl text-white leading-tight"
+              style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+            >
               {greeting},<br />{displayName}
             </h1>
             <p className="mt-2 text-[15px] text-white/60">{dateStr}</p>
 
-            {/* Weather + Play pill (Huxe style) */}
+            {/* Weather */}
             <div className="mt-6 flex items-center gap-4">
               <span className="flex items-center gap-1.5 text-[14px] text-white/60">
-                <Sun className="h-4 w-4" /> {weather}
+                <Sun className="h-4 w-4" strokeWidth={1.5} /> {weather}
               </span>
             </div>
           </div>
@@ -764,9 +759,9 @@ export function HoyTab({
               }
             }}
             disabled={isGenerating}
-            className="mt-6 lg:mt-0 w-full lg:w-auto rounded-full bg-[#7C3AED] px-6 lg:px-8 py-3.5 text-[15px] font-semibold text-white transition-all duration-200 hover:bg-[#6D28D9] active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-6 lg:mt-0 w-full lg:w-auto rounded-full bg-white px-6 lg:px-8 py-3.5 text-[15px] font-medium text-[#E07856] transition-all duration-500 ease-out hover:bg-white/90 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Play className="h-4 w-4 fill-white" />
+            <Play className="h-4 w-4 fill-[#E07856]" strokeWidth={1.5} />
             {todayEpisode ? "Reproducir" : "Generar mi podcast"}
           </button>
         </div>
@@ -778,30 +773,30 @@ export function HoyTab({
       {/* ═══ Keep listening / Today's episode ═══ */}
       {todayEpisode && (
         <section>
-          <h2 className="mb-3 flex items-center gap-2 text-[15px] font-bold text-[#111827]">
-            <Clock className="h-4 w-4 text-[#9CA3AF]" />
+          <h2 className="mb-3 flex items-center gap-2 text-[15px] font-medium text-[#1A1614]">
+            <Clock className="h-4 w-4 text-[#9B8E84]" strokeWidth={1.5} />
             Sigue escuchando
           </h2>
           <Link
             href={`/historial/${todayEpisode.id}`}
-            className="group flex gap-4 glass-card-warm p-4 transition-all duration-200 hover:scale-[1.01]"
+            className="group flex gap-4 glass-card-warm p-4 transition-all duration-500 ease-out hover:scale-[1.01]"
           >
             <div className="relative shrink-0">
               <EpisodeThumbnail topics={todayEpisode.topics} size="md" />
-              <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                <Play className="h-8 w-8 fill-white text-white" />
+              <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                <Play className="h-8 w-8 fill-white text-white" strokeWidth={1.5} />
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-[15px] font-semibold leading-tight text-[#111827]">{todayEpisode.title}</h3>
-              <p className="mt-0.5 truncate text-[13px] text-[#9CA3AF]">
+              <h3 className="truncate text-[15px] font-medium leading-tight text-[#1A1614]">{todayEpisode.title}</h3>
+              <p className="mt-0.5 truncate text-[13px] text-[#9B8E84]">
                 {todayEpisode.topics.map(topicId => { const t = getTopicById(topicId); return t ? t.nombre : topicId; }).join(", ")}
               </p>
               <div className="mt-2 flex items-center gap-3">
-                <span className="text-[12px] text-[#9CA3AF]">{todayEpisode.duration} min</span>
+                <span className="text-[12px] text-[#9B8E84]">{todayEpisode.duration} min</span>
               </div>
             </div>
-            <ChevronRight className="h-5 w-5 shrink-0 self-center text-[#D1D5DB]" />
+            <ChevronRight className="h-5 w-5 shrink-0 self-center text-[#E8DFD3]" strokeWidth={1.5} />
           </Link>
         </section>
       )}
@@ -809,15 +804,20 @@ export function HoyTab({
       {/* ═══ Generate CTA (no episode yet) ═══ */}
       {!todayEpisode && hasPreferences && (
         <div className="glass-card-warm p-6 text-center">
-          <Mic className="mx-auto mb-3 h-10 w-10 text-[#9CA3AF]" />
-          <h3 className="text-lg font-bold text-[#111827]">Genera tu primer podcast</h3>
-          <p className="mt-1 text-[13px] text-[#9CA3AF]">Alex y Sara te ponen al día con las últimas noticias</p>
+          <Mic className="mx-auto mb-3 h-10 w-10 text-[#D4A574]" strokeWidth={1.5} />
+          <h3
+            className="text-lg text-[#1A1614]"
+            style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+          >
+            Genera tu primer podcast
+          </h3>
+          <p className="mt-1 text-[13px] text-[#9B8E84]">Alex y Sara te ponen al día con las últimas noticias</p>
           {preferences && preferences.topics.length > 0 && (
             <div className="mt-3 flex flex-wrap justify-center gap-1.5">
               {preferences.topics.slice(0, 4).map((t) => {
                 const topic = getTopicById(t);
                 return (
-                  <span key={t} className="rounded-full bg-[#F3F4F6] px-2.5 py-0.5 text-[11px] text-[#9CA3AF]">
+                  <span key={t} className="rounded-full bg-[#F5EDE4] px-2.5 py-0.5 text-[11px] text-[#9B8E84]">
                     {topic?.nombre || t}
                   </span>
                 );
@@ -829,7 +829,7 @@ export function HoyTab({
             disabled={isGenerating || !preferences}
             className="mt-5 btn-huxe w-full lg:w-auto flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Play className="h-4 w-4 fill-white" />
+            <Play className="h-4 w-4 fill-white" strokeWidth={1.5} />
             Generar ahora
           </button>
         </div>
@@ -837,8 +837,8 @@ export function HoyTab({
 
       {!todayEpisode && !hasPreferences && (
         <div className="glass-card-warm p-6 text-center">
-          <Mic className="mx-auto mb-3 h-10 w-10 text-[#9CA3AF]" />
-          <p className="text-[14px] font-medium text-[#111827]">Configura tus preferencias para empezar</p>
+          <Mic className="mx-auto mb-3 h-10 w-10 text-[#D4A574]" strokeWidth={1.5} />
+          <p className="text-[14px] font-medium text-[#1A1614]">Configura tus preferencias para empezar</p>
           <button
             onClick={() => router.push("/onboarding")}
             className="mt-5 btn-huxe w-full lg:w-auto"
@@ -852,64 +852,64 @@ export function HoyTab({
       {weeklyDigest && !todayEpisode?.topics.includes("weekly-digest") && (
         <Link
           href={`/historial/${weeklyDigest.id}`}
-          className="flex gap-4 glass-card-warm p-4 transition-all duration-200 hover:scale-[1.01] group"
+          className="flex gap-4 glass-card-warm p-4 transition-all duration-500 ease-out hover:scale-[1.01] group"
         >
           <div className="relative shrink-0">
             <EpisodeThumbnail topics={["weekly-digest"]} size="sm" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-[15px] font-semibold text-[#111827]">Resumen de la semana</h3>
-              <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[11px] font-medium text-[#6B7280]">Semanal</span>
+              <h3 className="text-[15px] font-medium text-[#1A1614]">Resumen de la semana</h3>
+              <span className="rounded-full bg-[#F5EDE4] px-2 py-0.5 text-[11px] font-medium text-[#6B5D54]">Semanal</span>
             </div>
-            <p className="mt-0.5 truncate text-[13px] text-[#9CA3AF]">{weeklyDigest.title}</p>
+            <p className="mt-0.5 truncate text-[13px] text-[#9B8E84]">{weeklyDigest.title}</p>
           </div>
-          <ChevronRight className="h-5 w-5 shrink-0 self-center text-[#D1D5DB]" />
+          <ChevronRight className="h-5 w-5 shrink-0 self-center text-[#E8DFD3]" strokeWidth={1.5} />
         </Link>
       )}
 
       {/* ═══ Schedule ═══ */}
       {schedule?.is_active && (
         <div className="flex items-center gap-3 glass-card p-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F4F6]">
-            <Clock className="h-5 w-5 text-[#6B7280]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5EDE4]">
+            <Clock className="h-5 w-5 text-[#6B5D54]" strokeWidth={1.5} />
           </div>
           <div className="flex-1">
-            <p className="text-[14px] font-medium text-[#111827]">
+            <p className="text-[14px] font-medium text-[#1A1614]">
               Tu próximo podcast: {schedule.frequency === "daily" ? "todos los días" : schedule.frequency === "weekdays" ? "lunes a viernes" : "días seleccionados"} a las {schedule.time.slice(0, 5)}
             </p>
-            <p className="text-[12px] text-[#9CA3AF]">Generación automática activada</p>
+            <p className="text-[12px] text-[#9B8E84]">Generación automática activada</p>
           </div>
         </div>
       )}
 
-      {/* ═══ Recent episodes — horizontal scroll ═══ */}
+      {/* ═══ Recent episodes ═══ */}
       {recentEpisodes.length > 0 && (
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[15px] font-bold text-[#111827]">Episodios recientes</h2>
-            <button onClick={onSwitchToHistorial} className="cursor-pointer text-[13px] text-[#9CA3AF] transition-colors hover:text-[#111827]">Ver todo</button>
+            <h2 className="text-[15px] font-medium text-[#1A1614]">Episodios recientes</h2>
+            <button onClick={onSwitchToHistorial} className="cursor-pointer text-[13px] text-[#9B8E84] transition-all duration-500 ease-out hover:text-[#1A1614]">Ver todo</button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {recentEpisodes.map(episode => (
               <Link
                 key={episode.id}
                 href={`/historial/${episode.id}`}
-                className="group flex flex-col overflow-hidden glass-card-warm transition-all duration-200 hover:scale-[1.02]"
+                className="group flex flex-col overflow-hidden glass-card-warm transition-all duration-500 ease-out hover:scale-[1.02]"
               >
                 <div className="relative">
                   <EpisodeThumbnail topics={episode.topics} size="sm" />
-                  <div className="absolute inset-0 flex items-center justify-center rounded-t-3xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Play className="h-5 w-5 fill-white text-white" />
+                  <div className="absolute inset-0 flex items-center justify-center rounded-t-3xl bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Play className="h-5 w-5 fill-white text-white" strokeWidth={1.5} />
                   </div>
                 </div>
                 <div className="p-3">
-                  <h3 className="line-clamp-2 text-[13px] font-semibold leading-tight text-[#111827]">{episode.title}</h3>
+                  <h3 className="line-clamp-2 text-[13px] font-medium leading-tight text-[#1A1614]">{episode.title}</h3>
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] text-[#9CA3AF]">
+                    <span className="rounded-full bg-[#F5EDE4] px-2 py-0.5 text-[10px] text-[#9B8E84]">
                       {episode.duration} min
                     </span>
-                    <span className="text-[10px] text-[#9CA3AF]">
+                    <span className="text-[10px] text-[#9B8E84]">
                       {new Date(episode.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                     </span>
                   </div>
