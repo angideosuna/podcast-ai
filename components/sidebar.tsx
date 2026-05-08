@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Radio, Home, Search, Globe, Clock, User, Plus } from "lucide-react";
 import { useDashboard, type DashboardTab } from "@/components/dashboard-context";
-import { ProfileDropdown } from "@/components/profile-dropdown";
 
 interface NavItem {
   id: DashboardTab;
@@ -22,11 +20,14 @@ export function Sidebar() {
   const { activeTab, setActiveTab } = useDashboard();
 
   return (
-    <aside className="hidden md:flex md:w-[72px] lg:w-[240px] flex-col border-r border-[#E5E7EB] bg-gradient-to-b from-[#7C3AED]/5 to-white h-screen shrink-0 transition-all duration-300">
+    <aside className="hidden md:flex md:w-[72px] lg:w-[240px] flex-col bg-white/30 backdrop-blur-xl h-screen shrink-0 transition-all duration-500 ease-out">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-4 py-5 lg:px-5">
-        <Radio className="h-6 w-6 shrink-0 text-[#7C3AED]" />
-        <span className="hidden lg:inline text-lg font-extrabold text-[#111827] font-[family-name:var(--font-montserrat)]">
+      <div className="flex items-center gap-2.5 px-4 py-6 lg:px-5">
+        <Radio className="h-6 w-6 shrink-0 text-[#E07856]" strokeWidth={1.5} />
+        <span
+          className="hidden lg:inline text-lg text-[#1A1614]"
+          style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}
+        >
           WaveCast
         </span>
       </div>
@@ -41,13 +42,13 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-all duration-200 cursor-pointer ${
+              className={`flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-[14px] font-medium transition-all duration-500 ease-out cursor-pointer ${
                 isActive
-                  ? "bg-[#7C3AED]/10 text-[#7C3AED]"
-                  : "text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"
+                  ? "bg-[#E07856]/10 text-[#E07856]"
+                  : "text-[#6B5D54] hover:bg-white/40 hover:text-[#1A1614]"
               }`}
             >
-              <Icon className="h-5 w-5 shrink-0" />
+              <Icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
               <span className="hidden lg:inline">{item.label}</span>
             </button>
           );
@@ -58,24 +59,24 @@ export function Sidebar() {
       <div className="px-2 lg:px-3 mb-4">
         <button
           onClick={() => setActiveTab("universo")}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7C3AED] px-3 py-2.5 text-[14px] font-semibold text-white transition-all duration-200 hover:bg-[#6D28D9] cursor-pointer"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-[#E07856] px-3 py-2.5 text-[14px] font-medium text-white transition-all duration-500 ease-out hover:bg-[#C96A4A] cursor-pointer"
         >
-          <Plus className="h-4 w-4 shrink-0" />
+          <Plus className="h-4 w-4 shrink-0" strokeWidth={1.5} />
           <span className="hidden lg:inline">Crear DeepCast</span>
         </button>
       </div>
 
       {/* Profile at bottom */}
-      <div className="border-t border-[#E5E7EB] px-2 lg:px-3 py-3">
+      <div className="border-t border-[#E8DFD3]/40 px-2 lg:px-3 py-3">
         <button
           onClick={() => setActiveTab("perfil")}
-          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-all duration-200 cursor-pointer ${
+          className={`flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-[14px] font-medium transition-all duration-500 ease-out cursor-pointer ${
             activeTab === "perfil"
-              ? "bg-[#7C3AED]/10 text-[#7C3AED]"
-              : "text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"
+              ? "bg-[#E07856]/10 text-[#E07856]"
+              : "text-[#6B5D54] hover:bg-white/40 hover:text-[#1A1614]"
           }`}
         >
-          <User className="h-5 w-5 shrink-0" />
+          <User className="h-5 w-5 shrink-0" strokeWidth={1.5} />
           <span className="hidden lg:inline">Mi Perfil</span>
         </button>
       </div>
