@@ -343,48 +343,48 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
     : "?";
 
   // ─── Shared styles ─────────────────────────────────────────
-  const inputCls = "w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-[14px] text-[#111827] placeholder:text-[#9CA3AF] outline-none transition-colors focus:border-[#7C3AED]/50";
+  const inputCls = "w-full rounded-lg border border-white/30 bg-white/40 backdrop-blur-xl px-3 py-2.5 text-[14px] text-[#1A1614] placeholder:text-[#9B8E84] outline-none transition-all duration-500 ease-out focus:border-[#E07856]/50 focus:ring-2 focus:ring-[#E07856]/20";
 
   const sectionHeaderCls = (section: string) =>
-    `flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left font-semibold transition-colors duration-200 hover:bg-[#F9FAFB] ${
-      openSections.has(section) ? "text-[#111827]" : "text-[#6B7280]"
+    `flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left font-medium transition-all duration-500 ease-out hover:bg-white/30 ${
+      openSections.has(section) ? "text-[#1A1614]" : "text-[#6B5D54]"
     }`;
 
   const msgCls = (type: "success" | "error") =>
     `rounded-2xl border px-4 py-3 text-[13px] ${
       type === "success"
-        ? "border-[#7C3AED]/20 bg-[#7C3AED]/10 text-[#7C3AED]"
+        ? "border-[#E07856]/20 bg-[#E07856]/10 text-[#E07856]"
         : "border-red-500/20 bg-red-500/10 text-red-400"
     }`;
 
-  const saveBtnCls = "flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#7C3AED] px-6 py-2.5 font-semibold text-white transition-colors hover:bg-[#A855F7] disabled:cursor-not-allowed disabled:opacity-50";
+  const saveBtnCls = "flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#E07856] px-6 py-2.5 font-medium text-white transition-all duration-500 ease-out hover:bg-[#C96A4A] disabled:cursor-not-allowed disabled:opacity-50";
 
-  const labelCls = "mb-1.5 block text-[13px] font-medium text-[#6B7280]";
+  const labelCls = "mb-1.5 block text-[13px] font-medium text-[#6B5D54]";
 
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-[#7C3AED]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#D4A574]" />
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-5xl pb-8 lg:px-8">
-      {/* ═══ Profile Hero Header (estilo Spotify) ═══ */}
+      {/* ═══ Profile Hero Header ═══ */}
       <div className="relative mb-8">
         {/* Gradient background */}
-        <div className="h-[180px] bg-gradient-to-b from-[#7C3AED]/15 via-[#7C3AED]/5 to-[#F9FAFB]" />
+        <div className="h-[180px] bg-gradient-to-b from-[#E07856]/15 via-[#D4A574]/5 to-transparent" />
 
         {/* Profile info overlay */}
         <div className="relative -mt-16 px-6">
           <div className="flex items-end gap-5">
             {/* Avatar grande */}
-            <Avatar className="h-28 w-28 ring-4 ring-white">
+            <Avatar className="h-28 w-28 ring-4 ring-white/60">
               {avatarUrl ? (
                 <AvatarImage src={avatarUrl} alt={nombre} />
               ) : null}
-              <AvatarFallback className="bg-gradient-to-br from-[#7C3AED] to-[#6D28D9] text-2xl font-bold text-white">
+              <AvatarFallback className="bg-gradient-to-br from-[#E07856] to-[#C96A4A] text-2xl font-normal text-white">
                 {initials}
               </AvatarFallback>
             </Avatar>
@@ -393,27 +393,27 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
             <div className="mb-2 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 {isPublic ? (
-                  <span className="rounded-full bg-[#7C3AED]/15 px-2 py-0.5 text-[11px] font-medium text-[#7C3AED]">
+                  <span className="rounded-full bg-[#E07856]/10 px-2 py-0.5 text-[11px] font-medium text-[#E07856]">
                     <Globe className="mr-1 inline h-3 w-3" />Público
                   </span>
                 ) : (
-                  <span className="rounded-full bg-white border border-[#E5E7EB] px-2 py-0.5 text-[11px] font-medium text-[#6B7280]">
+                  <span className="rounded-full bg-white/40 border border-white/30 px-2 py-0.5 text-[11px] font-medium text-[#6B5D54]">
                     <Lock className="mr-1 inline h-3 w-3" />Privado
                   </span>
                 )}
               </div>
-              <h1 className="mt-1 truncate text-3xl font-bold text-[#111827] font-[family-name:var(--font-montserrat)]">
+              <h1 className="mt-1 truncate text-3xl font-normal text-[#1A1614] font-[family-name:var(--font-instrument-serif)]">
                 {nombre || "Tu perfil"}
               </h1>
               {username && (
-                <p className="text-[15px] text-[#6B7280]">@{username}</p>
+                <p className="text-[15px] text-[#6B5D54]">@{username}</p>
               )}
             </div>
           </div>
 
           {/* Bio */}
           {bio && (
-            <p className="mt-3 max-w-md text-[14px] leading-relaxed text-[#6B7280]">
+            <p className="mt-3 max-w-md text-[14px] leading-relaxed text-[#6B5D54]">
               {bio}
             </p>
           )}
@@ -424,16 +424,16 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
             <button
               type="button"
               onClick={() => { setFollowersModalTab("followers"); setShowFollowersModal(true); }}
-              className="text-[14px] text-[#6B7280] transition-colors hover:text-[#111827]"
+              className="text-[14px] text-[#6B5D54] transition-all duration-500 ease-out hover:text-[#1A1614]"
             >
-              <span className="font-semibold text-[#111827]">{followersCount}</span> seguidores
+              <span className="font-medium text-[#1A1614]">{followersCount}</span> seguidores
             </button>
             <button
               type="button"
               onClick={() => { setFollowersModalTab("following"); setShowFollowersModal(true); }}
-              className="text-[14px] text-[#6B7280] transition-colors hover:text-[#111827]"
+              className="text-[14px] text-[#6B5D54] transition-all duration-500 ease-out hover:text-[#1A1614]"
             >
-              <span className="font-semibold text-[#111827]">{followingCount}</span> siguiendo
+              <span className="font-medium text-[#1A1614]">{followingCount}</span> siguiendo
             </button>
 
             <div className="flex-1" />
@@ -442,9 +442,9 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
             {isPublic && username && (
               <Link
                 href={`/u/${username}`}
-                className="flex items-center gap-1.5 rounded-full border border-[#7C3AED] px-4 py-1.5 text-[13px] font-semibold text-[#7C3AED] transition-all duration-200 hover:bg-[#7C3AED]/10"
+                className="flex items-center gap-1.5 rounded-full border border-[#E07856] px-4 py-1.5 text-[13px] font-medium text-[#E07856] transition-all duration-500 ease-out hover:bg-[#E07856]/10"
               >
-                <Users className="h-3.5 w-3.5" />
+                <Users className="h-3.5 w-3.5" strokeWidth={1.5} />
                 Ver mi perfil
               </Link>
             )}
@@ -454,13 +454,13 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
 
       {/* ── Progress bar ── */}
       {completion < 100 && (
-        <div className="mx-4 mb-6 rounded-2xl border border-[#E5E7EB] bg-white p-4">
-          <p className="mb-2 text-[13px] font-medium text-[#6B7280]">
+        <div className="mx-4 mb-6 rounded-2xl border border-white/30 bg-white/40 backdrop-blur-xl p-4">
+          <p className="mb-2 text-[13px] font-medium text-[#6B5D54]">
             Completa tu perfil para podcasts más personalizados ({completion}%)
           </p>
-          <div className="h-1.5 overflow-hidden rounded-full bg-[#F3F4F6]">
+          <div className="h-1.5 overflow-hidden rounded-full bg-[#F5EDE4]">
             <div
-              className="h-full rounded-full bg-[#7C3AED] transition-all duration-500"
+              className="h-full rounded-full bg-[#E07856] transition-all duration-500 ease-out"
               style={{ width: `${completion}%` }}
             />
           </div>
@@ -469,20 +469,20 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
 
       <div className="space-y-4 px-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
         {/* ═══ Section A — Datos personales ═══ */}
-        <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white">
+        <div className="overflow-hidden rounded-2xl border border-white/30 bg-white/40 backdrop-blur-xl">
           <button
             type="button"
             onClick={() => toggleSection("perfil")}
             className={sectionHeaderCls("perfil")}
           >
             <span className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-[#6B7280]" />
+              <Settings className="h-4 w-4 text-[#6B5D54]" strokeWidth={1.5} />
               Datos personales
             </span>
             {openSections.has("perfil") ? (
-              <ChevronUp className="h-4 w-4 text-[#9CA3AF]" />
+              <ChevronUp className="h-4 w-4 text-[#9B8E84]" strokeWidth={1.5} />
             ) : (
-              <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
+              <ChevronDown className="h-4 w-4 text-[#9B8E84]" strokeWidth={1.5} />
             )}
           </button>
 
@@ -535,20 +535,20 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
         </div>
 
         {/* ═══ Section B — Preferencias de podcast ═══ */}
-        <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white">
+        <div className="overflow-hidden rounded-2xl border border-white/30 bg-white/40 backdrop-blur-xl">
           <button
             type="button"
             onClick={() => toggleSection("preferencias")}
             className={sectionHeaderCls("preferencias")}
           >
             <span className="flex items-center gap-2">
-              <Mic className="h-4 w-4 text-[#6B7280]" />
+              <Mic className="h-4 w-4 text-[#6B5D54]" strokeWidth={1.5} />
               Preferencias de podcast
             </span>
             {openSections.has("preferencias") ? (
-              <ChevronUp className="h-4 w-4 text-[#9CA3AF]" />
+              <ChevronUp className="h-4 w-4 text-[#9B8E84]" strokeWidth={1.5} />
             ) : (
-              <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
+              <ChevronDown className="h-4 w-4 text-[#9B8E84]" strokeWidth={1.5} />
             )}
           </button>
 
@@ -565,7 +565,7 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
 
               {/* Temas */}
               <div>
-                <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Temas</h3>
+                <h3 className="mb-3 text-[12px] font-medium uppercase tracking-wide text-[#9B8E84]">Temas</h3>
                 <div className="space-y-3">
                   {CATEGORIES.map((cat) => (
                     <CategoryCard
@@ -598,17 +598,17 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
               <VoicePicker selected={voice} onSelect={setVoice} />
 
               {/* ── Generación automática ── */}
-              <div className="border-t border-[#E5E7EB] pt-5">
-                <h3 className="mb-4 text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Generación automática</h3>
+              <div className="border-t border-[#E8DFD3]/40 pt-5">
+                <h3 className="mb-4 text-[12px] font-medium uppercase tracking-wide text-[#9B8E84]">Generación automática</h3>
 
                 {/* Toggle */}
                 <div className="flex items-center justify-between">
-                  <span className="text-[14px] font-medium text-[#6B7280]">Activar generación automática</span>
+                  <span className="text-[14px] font-medium text-[#6B5D54]">Activar generación automática</span>
                   <button
                     type="button"
                     onClick={() => setScheduleActive((v) => !v)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-300 ${
-                      scheduleActive ? "bg-[#7C3AED]" : "bg-[#E5E7EB]"
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-500 ease-out ${
+                      scheduleActive ? "bg-[#E07856]" : "bg-[#E8DFD3]"
                     }`}
                     role="switch"
                     aria-checked={scheduleActive}
@@ -632,23 +632,23 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
                       onChange={(e) => setScheduleTime(e.target.value)}
                       className={inputCls + " w-auto"}
                     />
-                    <span className="text-[13px] text-[#9CA3AF]">Tu podcast estará listo a esta hora</span>
+                    <span className="text-[13px] text-[#9B8E84]">Tu podcast estará listo a esta hora</span>
                   </div>
                 </div>
 
                 {/* Periodicidad */}
                 <div className="mt-4">
-                  <p className="mb-2 text-[13px] font-medium text-[#6B7280]">Periodicidad</p>
+                  <p className="mb-2 text-[13px] font-medium text-[#6B5D54]">Periodicidad</p>
                   <div className="flex flex-wrap gap-2">
                     {PERIODICIDAD_OPTIONS.map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
                         onClick={() => setPeriodicidad(opt.value)}
-                        className={`flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium transition-all duration-200 ${
+                        className={`flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium transition-all duration-500 ease-out ${
                           periodicidad === opt.value
-                            ? "bg-[#7C3AED] text-white"
-                            : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB] hover:text-[#111827]"
+                            ? "bg-[#E07856] text-white"
+                            : "bg-[#F5EDE4] text-[#6B5D54] hover:bg-[#E8DFD3] hover:text-[#1A1614]"
                         }`}
                       >
                         {periodicidad === opt.value && (
@@ -665,17 +665,17 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
                 {/* Días personalizados */}
                 {periodicidad === "personalizado" && (
                   <div className="mt-4">
-                    <p className="mb-2 text-[13px] font-medium text-[#6B7280]">Selecciona los días:</p>
+                    <p className="mb-2 text-[13px] font-medium text-[#6B5D54]">Selecciona los días:</p>
                     <div className="flex gap-2">
                       {DIAS_SEMANA.map((dia) => (
                         <button
                           key={dia.value}
                           type="button"
                           onClick={() => toggleDia(dia.value)}
-                          className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-[13px] font-semibold transition-all duration-200 ${
+                          className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-[13px] font-medium transition-all duration-500 ease-out ${
                             diasPersonalizados.includes(dia.value)
-                              ? "bg-[#7C3AED] text-white"
-                              : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB] hover:text-[#111827]"
+                              ? "bg-[#E07856] text-white"
+                              : "bg-[#F5EDE4] text-[#6B5D54] hover:bg-[#E8DFD3] hover:text-[#1A1614]"
                           }`}
                         >
                           {dia.label}
@@ -697,20 +697,20 @@ export function PerfilTab({ onNameChange, onSurveyChange }: PerfilTabProps) {
         </div>
 
         {/* ═══ Section C — Cuenta ═══ */}
-        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-4">
+        <div className="rounded-2xl border border-white/30 bg-white/40 backdrop-blur-xl p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Lock className="h-4 w-4 text-[#6B7280]" />
-            <h3 className="font-semibold text-[#111827]">Cuenta</h3>
+            <Lock className="h-4 w-4 text-[#6B5D54]" strokeWidth={1.5} />
+            <h3 className="font-medium text-[#1A1614]">Cuenta</h3>
           </div>
           {email && (
-            <p className="mb-4 text-[13px] text-[#9CA3AF]">{email}</p>
+            <p className="mb-4 text-[13px] text-[#9B8E84]">{email}</p>
           )}
           <button
             type="button"
             onClick={handleLogout}
-            className="flex cursor-pointer items-center gap-2 text-[13px] text-[#9CA3AF] transition-all duration-200 hover:text-red-400"
+            className="flex cursor-pointer items-center gap-2 text-[13px] text-[#9B8E84] transition-all duration-500 ease-out hover:text-red-400"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4" strokeWidth={1.5} />
             Cerrar sesión
           </button>
         </div>
